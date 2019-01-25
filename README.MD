@@ -2,9 +2,6 @@
 ## Integrate Public Metadata Underneath professional Library SErvices
 
 ### Quickstart
-Die Anwendung wird über ein CLI gestartet und verwaltet. 
-Zum Starten der Anwendung wird zunächst eine Liste mit URIs benötigt, 
-die entsprechende relevante Datenquellen identifizieren. Weiterhin wird ein Mappingfile benötigt.
 
 IMPULSE can be used through a command line application.
 ```
