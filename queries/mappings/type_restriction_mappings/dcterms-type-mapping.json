@@ -1,0 +1,58 @@
+{
+  "queries": [
+    "PREFIX dcterms: <http://purl.org/dc/terms/>   PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>   SELECT ?x   WHERE {  ?x dcterms:title ?a .  ?x dcterms:creator ?b .  ?x rdf:type dcterms:BibliographicResource . }"
+  ],
+  "types": [
+    "http://purl.org/dc/terms/BibliographicResource"
+  ],
+  "properties": [
+    "http://purl.org/dc/terms/title", "http://purl.org/dc/terms/creator"
+  ],
+  "mappings": {
+		"title":[
+			"http://purl.org/dc/terms/title"
+		],
+		"abstract":[
+			"http://purl.org/dc/terms/abstract"
+		],
+		"metadata_persons": [
+			"http://purl.org/dc/terms/creator",
+			"http://purl.org/dc/terms/contributor"
+		],
+		"metadata_person_mapping": {
+			"rawName":[
+				"http://www.w3.org/2000/01/rdf-schema#label",
+				"http://xmlns.com/foaf/0.1/name"
+			]
+		},
+	   "metadata_venue":[
+			 "http://purl.org/dc/terms/isPartOf"
+			 ],
+		"metadata_venue_mapping": {
+			"rawName": [
+				"http://purl.org/dc/terms/title",
+				"http://www.w3.org/2000/01/rdf-schema#label"
+			],
+			"volume":[
+				"http://purl.org/ontology/bibo/volume"
+			],
+			"location":[
+				"http://www.w3.org/2001/vcard-rdf/3.0#locality"
+		  ]
+		},  
+		"startDate":[
+			"http://purl.org/dc/terms/date"
+		],
+		"language":[
+			"http://purl.org/dc/terms/language"
+		],
+		"concepts": [
+			"http://purl.org/dc/terms/subject"
+		],
+    "metadata_concept_mapping": {
+      "rawName": [
+        "http://www.w3.org/2000/01/rdf-schema#label"        
+      ]
+    }
+	}
+}
