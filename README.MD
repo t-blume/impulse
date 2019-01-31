@@ -31,7 +31,7 @@ $ java -jar impulse.jar -f \testresources\sample-rdf-data.nt.gz -m \testresource
 #### How to reprocude?
 
   1. Download the BTC 2014 dataset from http://km.aifb.kit.edu/projects/btc-2014/
-  2. Anpassen oder Übernehmen eines der Mapping-Files
+  2. Adapt or adopt one of the mapping files
   3. The seedlist will be downloaded by queriying http://lodatio.informatik.uni-kiel.de/. If LODatio is unavaiable use the seedlist from the Zenodo repository. 
   
  #### Technical details of implementation
