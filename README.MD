@@ -33,7 +33,8 @@ First of all you need to define SPARQL queries to find bibliographic metadata. I
 As a Second step the framework harvests the set of datasources that are returned from each query.
 
 #### Experiment datasets
-The results from our expriments can be found here: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2548392.svg)](https://doi.org/10.5281/zenodo.2548392)
+The results from our expriments can be found here: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2553811.svg)](https://doi.org/10.5281/zenodo.2553811)
+
 
 ### About
 
