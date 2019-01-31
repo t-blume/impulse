@@ -21,6 +21,13 @@ usage: [-f <filename[.gz]>] [-m <mappingfile[.json]>] [-mi] [-dCM] [-ds <context
   [-o <outputDirectory>]          Name of NQuad file with output
   [-e <ElasticsearchIndex>]       Name of Elasticsearch index to export output
 ```
+
+#### Example 
+
+```
+$ java -jar impulse.jar -f \testresources\sample-rdf-data.nt.gz -m \testresources\sample-mapping.json -o \testresources -ds \testresources\sample-datasourceURIs.csv
+
+```
   
  #### Mapping File
 This mapping file defines which information is used for which attribute. In addition, optional attributes can be defined by the user, e.g. http://purl.org/dc/terms/language. 
