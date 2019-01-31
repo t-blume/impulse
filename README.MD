@@ -25,7 +25,7 @@ usage: [-f <filename[.gz]>] [-m <mappingfile[.json]>] [-mi] [-dCM] [-ds <context
 #### Quickstart with sample-data 
 
 ```
-$ java -jar impulse.jar -f \testresources\sample-rdf-data.nt.gz -m \testresources\sample-mapping.json -o \testresources -ds \testresources\sample-datasourceURIs.csv
+$ java -jar impulse.jar -f testresources/sample-rdf-data.nt.gz -m testresources/sample-mapping.json -o testresources -ds testresources/sample-datasourceURIs.csv
 
 ```
 #### How to reprocude?
