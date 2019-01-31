@@ -22,16 +22,34 @@ usage: [-f <filename[.gz]>] [-m <mappingfile[.json]>] [-mi] [-dCM] [-ds <context
   [-e <ElasticsearchIndex>]       Name of Elasticsearch index to export output
 ```
 
-#### Example 
+#### Quickstart with sample-data 
 
 ```
 $ java -jar impulse.jar -f \testresources\sample-rdf-data.nt.gz -m \testresources\sample-mapping.json -o \testresources -ds \testresources\sample-datasourceURIs.csv
 
 ```
+#### How to reprocude?
+
+  1. Download the BTC 2014 dataset from http://km.aifb.kit.edu/projects/btc-2014/
+  2. Anpassen oder Übernehmen eines der Mapping-Files
+  3. The seedlist will be downloaded by queriying http://lodatio.informatik.uni-kiel.de/. If LODatio is unavaiable use the seedlist from the Zenodo repository. 
+  
+ #### Technical details of implementation
+* Main
+   * The framework was implemented as a command line interface.  
+* Input
+   * In the "input" package, the data set is transferred in the internal data format.  Furthermore, the RDF instances for the FiFo    instance cache are created.    
+* Processing
+   * All data sources are first added to a pipeline. These are then filtered one after the other by the corresponding filter. With the context filter, all data sources specified by the seed list are filtered out. With the PLD filter, all data sources belonging to a pay-level domain of the seed list are filtered accordingly. 
+   * Once prepossecing is complete, the data sources are passed from the harvester to the MOVINGParser. In the MOVINGParser, the information is assigned to the correct attributes according to the mapping file.   At this point, the parser can be extended by individual fields. These would have to be integrated in the mapping file. A corresponding method must then be implemented in the MOVINGParser.
+* Output
+   * After the parsing is complete, the data items are exported. The data is exported as a JSON object. They can be exported to disk or directly to a previously specified Elasticsearch index.
+
+
   
  #### Mapping File
 This mapping file defines which information is used for which attribute. In addition, optional attributes can be defined by the user, e.g. http://purl.org/dc/terms/language. 
-The mapping file also provides the queries. In addition to that you can make type restiction in the mapping file. So only documents which fits to the type will be processed. Furthermore, you can define mandatory properties. 
+The mapping file also provides the queries. In addition to that you can make type restiction in the mapping file. So only documents which fits to the type will be processed. Furthermore, you can define mandatory properties.
   
 
 
