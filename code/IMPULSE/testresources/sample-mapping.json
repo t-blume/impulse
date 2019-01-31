@@ -1,0 +1,66 @@
+{
+  "queries": [
+    "PREFIX dcterms: <http://purl.org/dc/terms/>     SELECT ?x   WHERE {  ?x dcterms:title ?a .  ?x dcterms:creator ?b . }"
+  ],
+  "types": [""],
+  "properties": [
+    "http://purl.org/dc/terms/title", "http://purl.org/dc/terms/creator", "http://purl.org/dc/terms/contributor"
+  ],
+  "mappings": {
+		"title":[
+			"http://purl.org/dc/terms/title",
+			"http://swrc.ontoware.org/ontology#title"
+		],
+		"abstract":[
+			"http://purl.org/dc/terms/abstract",
+			"http://swrc.ontoware.org/ontology#abstract",
+			"http://swrc.ontoware.org/ontology#abstract"
+		],
+		"metadata_persons": [
+			"http://purl.org/dc/terms/creator",
+			"http://purl.org/dc/terms/contributor",
+			"http://swrc.ontoware.org/ontology#author",
+			"http://swrc.ontoware.org/ontology#Person",
+			"http://swrc.ontoware.org/ontology#name",
+			"http://purl.org/ontology/bibo/authorList"
+		],
+		"metadata_person_mapping": {
+			"rawName":[
+				"http://www.w3.org/2000/01/rdf-schema#label",
+				"http://xmlns.com/foaf/0.1/name",
+				"http://swrc.ontoware.org/ontology#Person",
+				"http://swrc.ontoware.org/ontology#name"
+			]
+		},
+	   "metadata_venue":[
+			 "http://purl.org/dc/terms/isPartOf"
+			 ],
+		"metadata_venue_mapping": {
+			"rawName": [
+				"http://purl.org/dc/terms/title",
+				"http://www.w3.org/2000/01/rdf-schema#label"
+			],
+			"volume":[
+				"http://purl.org/ontology/bibo/volume"
+			],
+			"location":[
+				"http://www.w3.org/2001/vcard-rdf/3.0#locality"
+		  ]
+		},  
+		"startDate":[
+			"http://purl.org/dc/terms/date"
+		],
+		"language":[
+			"http://purl.org/dc/terms/language"
+		],
+		"concepts": [
+			"http://purl.org/dc/terms/subject",
+			"http://swrc.ontoware.org/ontology#keywords"
+		],
+    "metadata_concept_mapping": {
+      "rawName": [
+        "http://www.w3.org/2000/01/rdf-schema#label"        
+      ]
+    }
+	}
+}
