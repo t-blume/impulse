@@ -3,10 +3,7 @@
 
 ### Quickstart
 
-IMPULSE can be used through a command line application.
-```
-$ java -jar impulse.jar
-```
+IMPULSE is a command line application.
 
 ```
 usage: [-f <filename[.gz]>] [-m <mappingfile[.json]>] [-mi] [-dCM] [-ds <contextURIs[.csv]>] [-pld] 
@@ -28,20 +25,20 @@ usage: [-f <filename[.gz]>] [-m <mappingfile[.json]>] [-mi] [-dCM] [-ds <context
 $ java -jar impulse.jar -f testresources/sample-rdf-data.nt.gz -m testresources/sample-mapping.json -o testresources -ds testresources/sample-datasourceURIs.csv
 
 ```
-#### How to reprocude?
+#### How to reprocude the experiments?
 
   1. Download the BTC 2014 dataset from http://km.aifb.kit.edu/projects/btc-2014/
-  2. Adapt or adopt one of the mapping files
-  3. The seedlist will be downloaded by queriying http://lodatio.informatik.uni-kiel.de/. If LODatio is unavaiable use the seedlist from the Zenodo repository. 
+  2. Use the mapping files in the mappingfiles directory
+  3. The seedlist will be downloaded by querying http://lodatio.informatik.uni-kiel.de/. This step can be skipped, when the corresponding seedlist from the Zenodo repository is provided via the -ds command 
   
  #### Technical details of implementation
 * Main
-   * The framework was implemented as a command line interface.  
+   * The framework is implemented as a command line interface.  
 * Input
    * In the "input" package, the data set is transferred in the internal data format.  Furthermore, the RDF instances for the FiFo    instance cache are created.    
 * Processing
    * All data sources are first added to a pipeline. These are then filtered one after the other by the corresponding filter. With the context filter, all data sources specified by the seed list are filtered out. With the PLD filter, all data sources belonging to a pay-level domain of the seed list are filtered accordingly. 
-   * Once prepossecing is complete, the data sources are passed from the harvester to the MOVINGParser. In the MOVINGParser, the information is assigned to the correct attributes according to the mapping file.   At this point, the parser can be extended by individual fields. These would have to be integrated in the mapping file. A corresponding method must then be implemented in the MOVINGParser.
+   * Once prepossecing is complete, the data sources are passed from the harvester to the MOVINGParser. In the MOVINGParser, the information is assigned to the correct attributes according to the mapping file. For different data formats, a new parser and a corresponding mapping files needs to be created.
 * Output
    * After the parsing is complete, the data items are exported. The data is exported as a JSON object. They can be exported to disk or directly to a previously specified Elasticsearch index.
 
@@ -62,4 +59,8 @@ The results from our expriments can be found here: [![DOI](https://zenodo.org/ba
 
 
 ### About
+
+
+### Acknowledgments
+This research was co-financed by the EU H2020 project MOVING (\url{http://www.moving-project.eu/}) under contract no 693092.
 
