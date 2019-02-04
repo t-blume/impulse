@@ -51,16 +51,18 @@ The mapping file also provides the queries. In addition to that you can make typ
 
 
 #### Queries
-First of all you need to define SPARQL queries to find bibliographic metadata. In our experiments we used queries, that are based on three established vocabularies, Bibliographic Ontology (BIBO)(http://bibliontology.com/), Semantic Web for Research Communities (SWRC) (http://ontoware.org/swrc) and DCMI Metadata Terms (DCTerms)(http://dublincore.org/documents/dcmi-terms/). 
+First of all you need to define SPARQL queries to find bibliographic metadata. In our experiments we used queries, that are based on three established vocabularies, Bibliographic Ontology [BIBO](http://bibliontology.com/), Semantic Web for Research Communities [SWRC] (http://ontoware.org/swrc) and DCMI Metadata Terms [DCTerms](http://dublincore.org/documents/dcmi-terms/). 
 As a Second step the framework harvests the set of datasources that are returned from each query.
 
 #### Experiment datasets
-The results from our expriments can be found here: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2553811.svg)](https://doi.org/10.5281/zenodo.2553811)
+The results from our expriments can be found in zendodo [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2553811.svg)](https://doi.org/10.5281/zenodo.2553811)
 
 
 ### About
 
 
-### Acknowledgments
+
+
+#### Acknowledgments
 This research was co-financed by the EU H2020 project MOVING (\url{http://www.moving-project.eu/}) under contract no 693092.
 
