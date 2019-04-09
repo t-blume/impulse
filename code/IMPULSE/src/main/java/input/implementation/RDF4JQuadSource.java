@@ -64,6 +64,11 @@ public class RDF4JQuadSource implements IQuintSource {
             for (IQuintSourceListener l : listeners)
                 l.microBatch();
         }
+        try {
+            close();
+        } catch (IOException e) {
+            logger.error(e.getLocalizedMessage());
+        }
     }
 
     @Override
@@ -100,10 +105,11 @@ public class RDF4JQuadSource implements IQuintSource {
      * @return
      */
     private Set<Quad> getAllQuadsForSubject(String subjectURI) {
-
         //TODO retrieve all quads
+
         Set<Quad> retrievedQuads = new HashSet<>();
         //notify listeners of new quad
+        counter += retrievedQuads.size();
         retrievedQuads.forEach(Q -> {
             for (IQuintSourceListener l : listeners)
                 l.pushedQuint(Q);
