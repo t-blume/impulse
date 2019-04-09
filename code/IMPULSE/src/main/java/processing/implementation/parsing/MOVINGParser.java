@@ -669,7 +669,6 @@ public class MOVINGParser {
     }
 
     private String parseSimpleAuthorRole(IQuint quint) {
-        //FIXME: quick hax
         if (quint.getPredicate().toString().contains("creator") || quint.getPredicate().toString().contains("author"))
             return "author";
         else if (quint.getPredicate().toString().contains("contributor"))

@@ -3,6 +3,7 @@ package main.java;
 import main.java.common.implementation.Mapping;
 import main.java.common.interfaces.IInstanceElement;
 import main.java.input.implementation.FileQuadSource;
+import main.java.input.implementation.RDF4JQuadSource;
 import main.java.input.interfaces.IQuintSource;
 import main.java.output.implementation.Elastify;
 import main.java.output.implementation.FileJSONSink;
@@ -33,6 +34,10 @@ import static main.java.utils.MainUtils.*;
 public class Main {
     private static final Logger logger = LogManager.getLogger(Main.class.getSimpleName());
 
+    public enum RDFRepository {
+        RDF4J
+    }
+
     public static void main(String[] args) {
         // JUL to slf4j logging bridge needed for nxparser logging
         SLF4JBridgeHandler.removeHandlersForRootLogger();
@@ -42,20 +47,30 @@ public class Main {
 
 
         ///////////////////////////////////////////////////////////////////////
-        OptionGroup inputFileGroup = new OptionGroup();
-        inputFileGroup.setRequired(true);
+        OptionGroup inputGroup = new OptionGroup();
+        inputGroup.setRequired(true);
         // read an input file
-        Option file = new Option("f", "file", true, "location of input file");
+        Option file = new Option("f", "file(s)", true, "read from file(s)");
         file.setArgName("file");
-        inputFileGroup.addOption(file);
+        inputGroup.addOption(file);
+
+
+        String availableRepositories = "";
+        for (int i = 0; i < RDFRepository.values().length - 1; i++)
+            availableRepositories += "" + RDFRepository.values()[i] + " | ";
+        availableRepositories += "" + RDFRepository.values()[RDFRepository.values().length - 1] + "";
 
         // or read a directory with input files
-        Option dir = new Option("d", "directory", true, "location of input file");
-        dir.setArgName("dir");
-        inputFileGroup.addOption(dir);
+        Option repo = new Option("r", "repository", true, "read from repository: <" +
+                availableRepositories + "> <URL>");
+        repo.setArgs(2);
+        repo.setArgName("<type> <URL>");
+        inputGroup.addOption(repo);
+
+        inputGroup.setRequired(true);
 
         //add option
-        options.addOptionGroup(inputFileGroup);
+        options.addOptionGroup(inputGroup);
         ///////////////////////////////////////////////////////////////////////
 
         ///////////////////////////////////////////////////////////////////////
@@ -158,10 +173,7 @@ public class Main {
     }
 
     private static void run(CommandLine cmd) throws IOException {
-
-        //TODO: parameter an aus für download von cache misses
         List<String> inputFiles = new LinkedList<>();
-        boolean isDirectory = false;
         String regexFileFilter;
 
         String outputDir = null;
@@ -172,6 +184,9 @@ public class Main {
         boolean usePLDFilter = false;
         boolean downloadCacheMiss = false;
 
+        //repository input
+        RDFRepository rdfRepository = null;
+        String repositoryURL = null;
         //mute System errors from NxParser for normal procedure
         if (!logger.getLevel().isLessSpecificThan(Level.TRACE))
             System.setErr(new PrintStream(new OutputStream() {
@@ -183,9 +198,14 @@ public class Main {
         //get input files
         if (cmd.hasOption("f"))
             inputFiles.add(cmd.getOptionValue("f"));
-        else if (cmd.hasOption("d")) {
-            inputFiles.add(cmd.getOptionValue("d"));
-            isDirectory = true;
+        else if (cmd.hasOption("r")) {
+            //TODO
+            String repoType = cmd.getOptionValues("r")[0];
+            for (int i = 0; i < RDFRepository.values().length - 1; i++)
+                if(RDFRepository.values()[i].toString().equals(repoType))
+                    rdfRepository = RDFRepository.values()[i];
+
+            repositoryURL = cmd.getOptionValues("r")[1];
         }
 
         //filter for specific files in folder
@@ -201,7 +221,6 @@ public class Main {
         if (cmd.hasOption("m")) {
             String mappingString = readFile(cmd.getOptionValue("m"));
             mapping = new Mapping(mappingString);
-
         }
 
         if (cmd.hasOption("mi")) {
@@ -215,7 +234,6 @@ public class Main {
         if (cmd.hasOption("ds"))
             datasourceURIs = loadContexts(cmd.getOptionValue("ds"));
         else {
-
             //context file not given, then query LODatio
             LODatioQuery queryEngine = new LODatioQuery();
             Set<String> queryStrings = mapping.getQueries();
@@ -224,7 +242,6 @@ public class Main {
             while (queryStringIterator.hasNext()) {
                 datasourceURIs.addAll(queryEngine.queryDatasource(queryStringIterator.next(), -1));
             }
-
         }
         if (cmd.hasOption("pld"))
             usePLDFilter = true;
@@ -245,10 +262,20 @@ public class Main {
 
 
         //source of RDF triples
-        IQuintSource quintSource = new FileQuadSource(inputFiles, isDirectory,
+        IQuintSource quintSource = null;
+        if(!inputFiles.isEmpty())
+            quintSource = new FileQuadSource(inputFiles, true,
                 "http://harverster.informatik.uni-kiel.de/", fileFilter);
+        if(repositoryURL != null){
+            if(rdfRepository.equals(RDFRepository.RDF4J))
+                quintSource = new RDF4JQuadSource(repositoryURL);
+        }
 
-        //TODO: make in nice for Open Source Project, for now efficiency!
+        if(quintSource == null){
+            logger.error("Invalid RDF source!");
+            System.exit(-1);
+        }
+
         BasicQuintPipeline preprocessingPipelineContext = new BasicQuintPipeline();
         BasicQuintPipeline preprocessingPipelinePLD = new BasicQuintPipeline();
 
@@ -259,7 +286,6 @@ public class Main {
         preprocessingPipelineContext.addProcessor(new ContextFilter(datasourceURIs));
         if (usePLDFilter)
             preprocessingPipelinePLD.addProcessor(new PLDFilter(datasourceURIs));
-
 
         // all quints have to pass the pre-processing pipeline
         quintSource.registerQuintListener(preprocessingPipelineContext);

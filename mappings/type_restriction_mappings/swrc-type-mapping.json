@@ -1,0 +1,60 @@
+{
+  "queries": [
+    "PREFIX swrc: <http://swrc.ontoware.org/ontology#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>  SELECT ?x WHERE {            		?x swrc:title ?a .            		?x swrc:author ?b .   ?x rdf:type  swrc:InProceedings .        	}"
+  ],
+  "types": [
+    "http://swrc.ontoware.org/ontology#InProceedings"
+  ],
+  "properties": [
+    "http://swrc.ontoware.org/ontology#title", "http://swrc.ontoware.org/ontology#author"
+  ],
+  "mappings": {
+		"title":[
+			"http://swrc.ontoware.org/ontology#title"
+		],
+		"abstract":[
+			"http://swrc.ontoware.org/ontology#abstract"
+		],
+		"metadata_persons": [
+			"http://swrc.ontoware.org/ontology#author",
+			"http://swrc.ontoware.org/ontology#Person",
+			"http://swrc.ontoware.org/ontology#name"			
+		],
+		"metadata_person_mapping": {
+			"rawName":[
+				"http://www.w3.org/2000/01/rdf-schema#label",
+				"http://xmlns.com/foaf/0.1/name",
+				"http://swrc.ontoware.org/ontology#Person",
+				"http://swrc.ontoware.org/ontology#name"			
+			]
+		},
+	   "metadata_venue":[
+			 "http://swrc.ontoware.org/ontology#journal"
+			 ],
+		"metadata_venue_mapping": {
+			"rawName": [
+				"http://swrc.ontoware.org/ontology#journal"
+			],
+			"volume":[
+				"http://swrc.ontoware.org/ontology#volume"
+			],
+			"location":[
+				"http://www.w3.org/2001/vcard-rdf/3.0#locality"
+		  ]
+		},  
+		"startDate":[
+			"http://swrc.ontoware.org/ontology#date"
+		],
+		"language":[
+			"http://purl.org/dc/terms/language"
+		],
+		"concepts": [
+			"http://swrc.ontoware.org/ontology#keywords"
+		],
+    "metadata_concept_mapping": {
+      "rawName": [
+        "http://www.w3.org/2000/01/rdf-schema#label"        
+      ]
+    }
+	}
+}

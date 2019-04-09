@@ -53,7 +53,6 @@ public class FileQuadSource implements IQuintSource {
         this.filePaths = new ArrayList<>();
         for (String s : filePaths) {
             Path path = Paths.get(s).toAbsolutePath();
-
             // Continue if given path is nonexistant
             if (!Files.exists(path)) {
                 logger.warn("\"" + path + "\" file not found!");
@@ -117,9 +116,7 @@ public class FileQuadSource implements IQuintSource {
         for (IQuintSourceListener i : listeners)
             i.sourceStarted();
 
-
         //NxParser nxp = new NxParser();
-
         Iterator<Path> paths = filePaths.iterator();
         while (paths.hasNext()) {
             Path p = paths.next();
@@ -133,10 +130,8 @@ public class FileQuadSource implements IQuintSource {
                     ZipEntry entry;
                     while ((entry = zin.getNextEntry()) != null) {
                         NxParser parser = new NxParser();
-
                         parser.parse(new BufferedInputStream(zin));
                         iterateParser(parser);
-
                     }
                 } else {
                     if (p.toString().endsWith(".gz"))

@@ -34,6 +34,12 @@ public class InstanceAggregator implements IQuintListener {
 		addQuint2Cache(i, true);
 	}
 
+	@Override
+	public void microBatch() {
+		//flushes all instances out of the window, clears window afterwards to safe space
+		window.flush(true);
+	}
+
 	protected IInstanceElement createInstance(IQuint quint){
 		return new RDFInstance(quint.getSubject());
 	}

@@ -24,6 +24,12 @@ public interface IQuintListener {
 	void finishedQuint(IQuint i);
 
 	/**
+	 * Signals that the source has completed a micro batch
+	 */
+	void microBatch();
+
+
+	/**
 	 * Signals that no more quints will follow
 	 */
 	void finished();

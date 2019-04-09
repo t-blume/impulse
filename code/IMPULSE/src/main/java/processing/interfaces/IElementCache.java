@@ -73,8 +73,9 @@ public interface IElementCache<T extends ILocatable> {
 	/**
 	 * Flushes the whole cache. That means, that all elements have to be removed
 	 * from it, triggering the listener callbacks
+	 * @param deleteAfterwards clears the cache after flushing
 	 */
-	void flush();
+	void flush(boolean deleteAfterwards);
 
 	/**
 	 * Registers an {@link IElementCacheListener}. It will be called for each

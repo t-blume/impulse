@@ -95,6 +95,13 @@ public class BasicQuintPipeline implements IQuintPipeline, IQuintSourceListener 
     }
 
     @Override
+    public void microBatch() {
+        logger.debug("Micro batch initiated");
+        for (IQuintListener l : listeners)
+            l.microBatch();
+    }
+
+    @Override
     public void sourceClosed() {
         logger.debug("Pre-processing is finished!");
         for (IQuintListener l : listeners)

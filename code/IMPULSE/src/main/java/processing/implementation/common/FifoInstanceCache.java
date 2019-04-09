@@ -118,7 +118,6 @@ public class FifoInstanceCache<T extends ILocatable> implements
         if (capacity == Integer.MAX_VALUE && maxSize % 1000 == 0)
             System.out.format("\t\t\t\t\t\t\t\t\t\t\t\t\t\tIC: %08d / %08d\r", currentSize, maxSize);
 
-        //TODO: empirically estimate
         if (10 * capacity > 0 && deletionCounter > 10 * capacity) { //integer overflow
             long start = System.currentTimeMillis();
             Date date = new Date();
@@ -143,10 +142,14 @@ public class FifoInstanceCache<T extends ILocatable> implements
     }
 
     @Override
-    public void flush() {
+    public void flush(boolean deleteAfterwards) {
         while (size() != 0) {
             System.out.format("Items Left: %08d    \r", size());
             removeLast();
+        }
+        if(deleteAfterwards){
+            elements = new HashMap<>();
+            queue = new ArrayDeque<>();
         }
     }
 
@@ -158,7 +161,7 @@ public class FifoInstanceCache<T extends ILocatable> implements
     @Override
     public void close() {
         logger.info("Closing Instance Cache, flushing to listeners...");
-        flush();
+        flush(true);
         for (IElementCacheListener<T> l : listeners)
             l.finished();
     }

@@ -18,6 +18,12 @@ public interface IQuintSourceListener {
 	 */
 	void pushedQuint(IQuint quint);
 
+
+	/**
+	 * Signals that the source has completed a micro batch
+	 */
+	void microBatch();
+
 	/**
 	 * Signals that the source has been closed and won't produce any new quints
 	 */
