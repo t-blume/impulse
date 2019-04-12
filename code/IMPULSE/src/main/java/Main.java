@@ -63,6 +63,8 @@ public class Main {
         // or read a directory with input files
         Option repo = new Option("r", "repository", true, "read from repository: <" +
                 availableRepositories + "> <URL>");
+
+        //TODO what is Type? Is there any need of the repo ID?
         repo.setArgs(2);
         repo.setArgName("<type> <URL>");
         inputGroup.addOption(repo);
@@ -187,6 +189,7 @@ public class Main {
         //repository input
         RDFRepository rdfRepository = null;
         String repositoryURL = null;
+        String repositoryID = null;
         //mute System errors from NxParser for normal procedure
         if (!logger.getLevel().isLessSpecificThan(Level.TRACE))
             System.setErr(new PrintStream(new OutputStream() {
@@ -268,7 +271,7 @@ public class Main {
                 "http://harverster.informatik.uni-kiel.de/", fileFilter);
         if(repositoryURL != null){
             if(rdfRepository.equals(RDFRepository.RDF4J))
-                quintSource = new RDF4JQuadSource(repositoryURL);
+                quintSource = new RDF4JQuadSource(repositoryURL, repositoryID);
         }
 
         if(quintSource == null){
