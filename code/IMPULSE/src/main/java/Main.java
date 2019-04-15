@@ -2,25 +2,28 @@ package main.java;
 
 import main.java.common.implementation.Mapping;
 import main.java.common.interfaces.IInstanceElement;
+import main.java.common.interfaces.IQuint;
 import main.java.input.implementation.FileQuadSource;
 import main.java.input.implementation.RDF4JQuadSource;
+import main.java.input.interfaces.IQuintListener;
 import main.java.input.interfaces.IQuintSource;
 import main.java.output.implementation.Elastify;
 import main.java.output.implementation.FileJSONSink;
+import main.java.output.implementation.RDF4QuadSink;
+import main.java.output.interfaces.IQuadSink;
 import main.java.processing.implementation.Harvester;
 import main.java.processing.implementation.LODatioQuery;
 import main.java.processing.implementation.common.DataItemCache;
 import main.java.processing.implementation.common.FifoInstanceCache;
 import main.java.processing.implementation.parsing.MOVINGParser;
-import main.java.processing.implementation.preprocessing.BasicQuintPipeline;
-import main.java.processing.implementation.preprocessing.ContextFilter;
-import main.java.processing.implementation.preprocessing.InstanceAggregator;
-import main.java.processing.implementation.preprocessing.PLDFilter;
+import main.java.processing.implementation.preprocessing.*;
 import main.java.processing.interfaces.IElementCache;
 import org.apache.commons.cli.*;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jsoup.helper.StringUtil;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import java.io.*;
@@ -39,21 +42,20 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        logger.debug(Arrays.toString(args));
         // JUL to slf4j logging bridge needed for nxparser logging
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
 
         Options options = new Options();
 
+        ///////////////////////////////////////////////////////////////////////
 
         ///////////////////////////////////////////////////////////////////////
-        OptionGroup inputGroup = new OptionGroup();
-        inputGroup.setRequired(true);
         // read an input file
-        Option file = new Option("f", "file(s)", true, "read from file(s)");
+        Option file = new Option("f", "files", true, "read from file(s)");
         file.setArgName("file");
-        inputGroup.addOption(file);
-
+        options.addOption(file);
 
         String availableRepositories = "";
         for (int i = 0; i < RDFRepository.values().length - 1; i++)
@@ -61,20 +63,17 @@ public class Main {
         availableRepositories += "" + RDFRepository.values()[RDFRepository.values().length - 1] + "";
 
         // or read a directory with input files
-        Option repo = new Option("r", "repository", true, "read from repository: <" +
-                availableRepositories + "> <URL>");
+        Option repo = new Option("r", "repository", true, "repository: <" +
+                availableRepositories + "> <URL> <ID>");
 
-        //TODO what is Type? Is there any need of the repo ID?
-        repo.setArgs(2);
-        repo.setArgName("<type> <URL>");
-        inputGroup.addOption(repo);
+        repo.setArgs(3);
+        repo.setArgName("<type> <URL> <ID>");
+        options.addOption(repo);
 
-        inputGroup.setRequired(true);
 
-        //add option
-        options.addOptionGroup(inputGroup);
         ///////////////////////////////////////////////////////////////////////
-
+        Option fixLiterals = new Option("fl", "fix", false, "try to fix literals");
+        options.addOption(fixLiterals);
         ///////////////////////////////////////////////////////////////////////
         Option inputDirectoryFilter = new Option("if", "inputFilter", true, "regex pattern to filter filenames");
         inputDirectoryFilter.setArgName("inputFilter");
@@ -86,7 +85,7 @@ public class Main {
         // read mapping and query
         Option mapping = new Option("m", "mapping", true, "location of mapping file");
         mapping.setArgName("mapping");
-        mapping.setRequired(true);
+
         options.addOption(mapping);
 
         Option mappingInferencing = new Option("mi", "mappingInferencing", false, "inferencing of mapping file");
@@ -119,6 +118,11 @@ public class Main {
         elastify.setArgs(2);
         elastify.setArgName("<index> <type>");
         outputGroup.addOption(elastify);
+
+        Option load = new Option("l", "load", false, "load file(s) to repository");
+        outputGroup.addOption(load);
+
+
         options.addOptionGroup(outputGroup);
         ///////////////////////////////////////////////////////////////////
 
@@ -190,31 +194,53 @@ public class Main {
         RDFRepository rdfRepository = null;
         String repositoryURL = null;
         String repositoryID = null;
+
+        //used to load files and store them in repo
+        boolean loadOnly = false;
+        IQuadSink quadSink = null;
+
+
         //mute System errors from NxParser for normal procedure
-        if (!logger.getLevel().isLessSpecificThan(Level.TRACE))
-            System.setErr(new PrintStream(new OutputStream() {
-                @Override
-                public void write(int b) {
-                }
-            }));
+//        if (!logger.getLevel().isLessSpecificThan(Level.TRACE))
+//            System.setErr(new PrintStream(new OutputStream() {
+//                @Override
+//                public void write(int b) {
+//                }
+//            }));
 
         //get input files
-        if (cmd.hasOption("f"))
+        if (cmd.hasOption("f")) {
             inputFiles.add(cmd.getOptionValue("f"));
-        else if (cmd.hasOption("r")) {
-            //TODO
+            logger.debug("Using input file " + cmd.getOptionValue("f"));
+        }
+
+        if (cmd.hasOption("r")) {
             String repoType = cmd.getOptionValues("r")[0];
-            for (int i = 0; i < RDFRepository.values().length - 1; i++)
-                if(RDFRepository.values()[i].toString().equals(repoType))
+            for (int i = 0; i < RDFRepository.values().length; i++)
+                if (RDFRepository.values()[i].toString().equals(repoType))
                     rdfRepository = RDFRepository.values()[i];
 
+
             repositoryURL = cmd.getOptionValues("r")[1];
+            repositoryID = cmd.getOptionValues("r")[2];
+            logger.debug("Using repository (" + rdfRepository + "): " + repositoryURL + " (" + repositoryID + ")");
+        }
+
+        if (cmd.hasOption("l")) {
+            //load and fill respository
+            if (repositoryURL == null || repositoryID == null) {
+                logger.error("No valid repository  found!");
+                System.exit(-1);
+            }
+            loadOnly = true;
+            logger.debug("Loading == " + loadOnly);
         }
 
         //filter for specific files in folder
-        if (cmd.hasOption("if"))
+        if (cmd.hasOption("if")) {
             regexFileFilter = cmd.getOptionValue("if");
-        else
+            logger.debug("using file filter...");
+        } else
             regexFileFilter = ".*";
 
         final String finalRegex = regexFileFilter;
@@ -224,19 +250,26 @@ public class Main {
         if (cmd.hasOption("m")) {
             String mappingString = readFile(cmd.getOptionValue("m"));
             mapping = new Mapping(mappingString);
+            logger.debug("using mapping file ...");
+
         }
 
         if (cmd.hasOption("mi")) {
             mapping = LODatioQuery.mappingInferencing(mapping, cmd.getOptionValue("m"));
+            logger.debug("using mapping inferencing ...");
+
         }
 
         if (cmd.hasOption("dCM")) {
             downloadCacheMiss = true;
+            logger.debug("download cache misses ...");
+
         }
 
-        if (cmd.hasOption("ds"))
+        if (cmd.hasOption("ds")) {
             datasourceURIs = loadContexts(cmd.getOptionValue("ds"));
-        else {
+            logger.debug("Using datasource URIs from file ...");
+        } else {
             //context file not given, then query LODatio
             LODatioQuery queryEngine = new LODatioQuery();
             Set<String> queryStrings = mapping.getQueries();
@@ -266,15 +299,19 @@ public class Main {
 
         //source of RDF triples
         IQuintSource quintSource = null;
-        if(!inputFiles.isEmpty())
+        if (!inputFiles.isEmpty())
             quintSource = new FileQuadSource(inputFiles, true,
-                "http://harverster.informatik.uni-kiel.de/", fileFilter);
-        if(repositoryURL != null){
-            if(rdfRepository.equals(RDFRepository.RDF4J))
-                quintSource = new RDF4JQuadSource(repositoryURL, repositoryID);
+                    "http://harverster.informatik.uni-kiel.de/", fileFilter);
+        if (repositoryURL != null) {
+            if (rdfRepository.equals(RDFRepository.RDF4J)) {
+                if (loadOnly)
+                    quadSink = new RDF4QuadSink(repositoryURL, repositoryID);
+                else
+                    quintSource = new RDF4JQuadSource(repositoryURL, repositoryID);
+            }
         }
 
-        if(quintSource == null){
+        if (quintSource == null) {
             logger.error("Invalid RDF source!");
             System.exit(-1);
         }
@@ -284,6 +321,13 @@ public class Main {
 
         //extract actual file name
         String p = getFileName(inputFiles);
+
+
+        /*
+         * filter fix literals
+         */
+        preprocessingPipelineContext.addProcessor(new FixLiterals(cmd.hasOption("fl")));
+        preprocessingPipelinePLD.addProcessor(new FixLiterals(cmd.hasOption("fl")));
 
 
         preprocessingPipelineContext.addProcessor(new ContextFilter(datasourceURIs));
@@ -297,134 +341,180 @@ public class Main {
             quintSource.registerQuintListener(preprocessingPipelinePLD);
 
 
-        //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
-        IElementCache<IInstanceElement> rdfInstanceCacheContext = new FifoInstanceCache<>();
-        InstanceAggregator instanceAggregatorContext = new InstanceAggregator(rdfInstanceCacheContext);
-        preprocessingPipelineContext.registerQuintListener(instanceAggregatorContext);
+        logger.debug("AASDA");
+        /*
+        two basic modes
+         */
+        if (loadOnly) {
+            logger.debug("Starting in \"load\"-mode....");
+            ////////////////////// <--------- load repository
+            IQuadSink finalQuadSink = quadSink;
 
-        IElementCache<IInstanceElement> rdfInstanceCachePLD = null;
-        if (usePLDFilter) {
+            preprocessingPipelineContext.registerQuintListener(new IQuintListener() {
+                long success = 0;
+                long failed = 0;
+
+                @Override
+                public void finishedQuint(IQuint i) {
+                    if (finalQuadSink.addQuint(i))
+                        success++;
+                    else
+                        failed++;
+                }
+
+                @Override
+                public void microBatch() {
+                    logger.warn("Micro Batch not supported!");
+                }
+
+                @Override
+                public void finished() {
+                    finalQuadSink.finished();
+                    logger.info("Added " + success + " to repository, " + failed + " failed!");
+                }
+            });
+            quintSource.start();
+
+        } else {
+            logger.debug("Starting in \"process\"-mode....");
+
+            ////////////////////// <--------- use repository if applicable
             //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
-            rdfInstanceCachePLD = new FifoInstanceCache<>();
-            InstanceAggregator instanceAggregatorPLD = new InstanceAggregator(rdfInstanceCachePLD);
-            preprocessingPipelinePLD.registerQuintListener(instanceAggregatorPLD);
-        }
+            IElementCache<IInstanceElement> rdfInstanceCacheContext = new FifoInstanceCache<>();
+            InstanceAggregator instanceAggregatorContext = new InstanceAggregator(rdfInstanceCacheContext);
+            preprocessingPipelineContext.registerQuintListener(instanceAggregatorContext);
 
+            IElementCache<IInstanceElement> rdfInstanceCachePLD = null;
+            if (usePLDFilter) {
+                //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
+                rdfInstanceCachePLD = new FifoInstanceCache<>();
+                InstanceAggregator instanceAggregatorPLD = new InstanceAggregator(rdfInstanceCachePLD);
+                preprocessingPipelinePLD.registerQuintListener(instanceAggregatorPLD);
+            }
 
-        //convert RDF instances to JSON instances
-        MOVINGParser parserContext = new MOVINGParser(rdfInstanceCacheContext, mapping, downloadCacheMiss);
-        MOVINGParser parserPLD = null;
-        if (usePLDFilter) {
             //convert RDF instances to JSON instances
-            parserPLD = new MOVINGParser(rdfInstanceCachePLD, mapping, downloadCacheMiss);
-        }
-
-        //in-memory cache to store converted JSON instances
-        DataItemCache jsonCacheContext = new DataItemCache();
-        DataItemCache jsonCachePLD = null;
-        if (usePLDFilter)
-            jsonCachePLD = new DataItemCache();
-
-        if (outputDir != null) {
-            jsonCacheContext.registerSink(new FileJSONSink(new PrintStream(
-                    outputDir + File.separator + "context-" + p + ".json")));
+            MOVINGParser parserContext = new MOVINGParser(rdfInstanceCacheContext, mapping, downloadCacheMiss);
+            MOVINGParser parserPLD = null;
             if (usePLDFilter) {
-                jsonCachePLD.registerSink(new FileJSONSink(new PrintStream(
-                        outputDir + File.separator + "pld-" + p + ".json")));
+                //convert RDF instances to JSON instances
+                parserPLD = new MOVINGParser(rdfInstanceCachePLD, mapping, downloadCacheMiss);
             }
-        } else if (elasticIndex != null) {
-            jsonCacheContext.registerSink(new Elastify(elasticIndex, elasticType));
-            if (usePLDFilter) {
-                logger.error("PLD and ELasticsearch not yet supported!");
-                System.exit(-1);
-            }
-        } else
-            logger.error("Misconfiguration export!");
-        //combine parser and json cache
-        Harvester harvesterContext = new Harvester(parserContext, jsonCacheContext);
-        Harvester harvesterPLD = null;
-        if (usePLDFilter)
-            harvesterPLD = new Harvester(parserPLD, jsonCachePLD);
 
-        //listen to RDF instances
-        rdfInstanceCacheContext.registerCacheListener(harvesterContext);
-        if(usePLDFilter)
-            rdfInstanceCachePLD.registerCacheListener(harvesterPLD);
+            //in-memory cache to store converted JSON instances
+            DataItemCache jsonCacheContext = new DataItemCache();
+            DataItemCache jsonCachePLD = null;
+            if (usePLDFilter)
+                jsonCachePLD = new DataItemCache();
 
-        long startTime = System.currentTimeMillis();
-        quintSource.start();
+            if (outputDir != null) {
+                jsonCacheContext.registerSink(new FileJSONSink(new PrintStream(
+                        outputDir + File.separator + "context-" + p + ".json")));
+                if (usePLDFilter) {
+                    jsonCachePLD.registerSink(new FileJSONSink(new PrintStream(
+                            outputDir + File.separator + "pld-" + p + ".json")));
+                }
+            } else if (elasticIndex != null) {
+                jsonCacheContext.registerSink(new Elastify(elasticIndex, elasticType));
+                if (usePLDFilter) {
+                    logger.error("PLD and ELasticsearch not yet supported!");
+                    System.exit(-1);
+                }
+            } else
+                logger.error("Misconfiguration export!");
+            //combine parser and json cache
+            Harvester harvesterContext = new Harvester(parserContext, jsonCacheContext);
+            Harvester harvesterPLD = null;
+            if (usePLDFilter)
+                harvesterPLD = new Harvester(parserPLD, jsonCachePLD);
 
-        long endTime = System.currentTimeMillis();
-        long time = ((endTime - startTime) / 1000) / 60;
-
-        //Export dump.nt
-
-        logger.info(parserContext.getMissingConcept() + " Missing Concepts " +
-                parserContext.getMissingPerson() + " Missing Persons " +
-                parserContext.getMissingVenue() + " Missing Venue! " +
-                (parserContext.getMissingVenue() + parserContext.getMissingPerson() + parserContext.getMissingConcept()) + " total Cachemisses!");
-
-        logger.info(parserPLD.getMissingConcept() + " Missing Concepts " +
-                parserPLD.getMissingPerson() + " Missing Persons " +
-                parserPLD.getMissingVenue() + " Missing Venue! " +
-                (parserPLD.getMissingVenue() + parserPLD.getMissingPerson() + parserPLD.getMissingConcept()) + " total Cachemisses!");
+            //listen to RDF instances
+            rdfInstanceCacheContext.registerCacheListener(harvesterContext);
+            if (usePLDFilter)
+                rdfInstanceCachePLD.registerCacheListener(harvesterPLD);
 
 
-        File fileContext = new File(outputDir + File.separator +
-                "context-" + p + "_cachemiss.txt");
+            long startTime = System.currentTimeMillis();
+            quintSource.start();
 
-        try (FileWriter writer = new FileWriter(fileContext, false)) {
-            PrintWriter pw = new PrintWriter(writer);
-            pw.println(parserContext.getMissingConcept() + " Missing Concepts " +
+            long endTime = System.currentTimeMillis();
+            long time = ((endTime - startTime) / 1000) / 60;
+
+            //Export dump.nt
+
+            logger.info(parserContext.getMissingConcept() + " Missing Concepts " +
                     parserContext.getMissingPerson() + " Missing Persons " +
                     parserContext.getMissingVenue() + " Missing Venue! " +
                     (parserContext.getMissingVenue() + parserContext.getMissingPerson() + parserContext.getMissingConcept()) + " total Cachemisses!");
 
-        } catch (IOException e1) {
-            e1.printStackTrace();
-        }
-
-        File filePLD = new File(outputDir + File.separator +
-                "pld-" + p + "_cachemiss.txt");
-
-        try (FileWriter writer = new FileWriter(filePLD, false)) {
-            PrintWriter pw = new PrintWriter(writer);
-            pw.println(parserPLD.getMissingConcept() + " Missing Concepts " +
+            logger.info(parserPLD.getMissingConcept() + " Missing Concepts " +
                     parserPLD.getMissingPerson() + " Missing Persons " +
                     parserPLD.getMissingVenue() + " Missing Venue! " +
                     (parserPLD.getMissingVenue() + parserPLD.getMissingPerson() + parserPLD.getMissingConcept()) + " total Cachemisses!");
 
-        } catch (IOException e1) {
-            e1.printStackTrace();
-        }
 
+            File fileContext = new File(outputDir + File.separator +
+                    "context-" + p + "_cachemiss.txt");
 
-        if (downloadCacheMiss) {
-            File file = new File(outputDir + File.separator +
-                    "context-" + p + "_cachemiss-dump.nt");
-
-            try (FileWriter writer = new FileWriter(file, true)) {
+            try (FileWriter writer = new FileWriter(fileContext, false)) {
                 PrintWriter pw = new PrintWriter(writer);
-                parserContext.newData.forEach(x -> pw.println(x));
+                pw.println(parserContext.getMissingConcept() + " Missing Concepts " +
+                        parserContext.getMissingPerson() + " Missing Persons " +
+                        parserContext.getMissingVenue() + " Missing Venue! " +
+                        (parserContext.getMissingVenue() + parserContext.getMissingPerson() + parserContext.getMissingConcept()) + " total Cachemisses!");
 
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
 
-            if(usePLDFilter){
-                File filePLD2 = new File(outputDir + File.separator +
-                        "pld-" + p + "_cachemiss-dump.nt");
+            File filePLD = new File(outputDir + File.separator +
+                    "pld-" + p + "_cachemiss.txt");
 
-                try (FileWriter writer = new FileWriter(filePLD2, true)) {
+            try (FileWriter writer = new FileWriter(filePLD, false)) {
+                PrintWriter pw = new PrintWriter(writer);
+                pw.println(parserPLD.getMissingConcept() + " Missing Concepts " +
+                        parserPLD.getMissingPerson() + " Missing Persons " +
+                        parserPLD.getMissingVenue() + " Missing Venue! " +
+                        (parserPLD.getMissingVenue() + parserPLD.getMissingPerson() + parserPLD.getMissingConcept()) + " total Cachemisses!");
+
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+
+
+            if (downloadCacheMiss) {
+                File file = new File(outputDir + File.separator +
+                        "context-" + p + "_cachemiss-dump.nt");
+
+                try (FileWriter writer = new FileWriter(file, true)) {
                     PrintWriter pw = new PrintWriter(writer);
-                    parserPLD.newData.forEach(x -> pw.println(x));
+                    parserContext.newData.forEach(x -> pw.println(x));
 
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
+
+                if (usePLDFilter) {
+                    File filePLD2 = new File(outputDir + File.separator +
+                            "pld-" + p + "_cachemiss-dump.nt");
+
+                    try (FileWriter writer = new FileWriter(filePLD2, true)) {
+                        PrintWriter pw = new PrintWriter(writer);
+                        parserPLD.newData.forEach(x -> pw.println(x));
+
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+
             }
 
+        /*
+        start the source to start the pipeline
+         */
+
+            logger.info("Harvesting took: " + time + " min");
         }
-        logger.info("Harvesting took: " + time + " min");
+
+
     }
 }

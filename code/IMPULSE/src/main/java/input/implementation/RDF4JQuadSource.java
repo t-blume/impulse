@@ -1,30 +1,22 @@
 package main.java.input.implementation;
 
-import main.java.MyTripleStore;
 import main.java.common.implementation.Quad;
 import main.java.input.interfaces.IQuintSource;
 import main.java.input.interfaces.IQuintSourceListener;
-import org.apache.commons.math3.geometry.spherical.twod.Edge;
-import org.apache.commons.math3.stat.descriptive.moment.SemiVariance;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.eclipse.rdf4j.common.iteration.CloseableIteration;
-import org.eclipse.rdf4j.common.iteration.ExceptionConvertingIteration;
-import org.eclipse.rdf4j.model.*;
 import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
-import org.eclipse.rdf4j.repository.RepositoryException;
-import org.eclipse.rdf4j.repository.RepositoryResult;
 import org.eclipse.rdf4j.repository.http.HTTPRepository;
-import org.eclipse.rdf4j.sail.SailException;
-import sun.security.provider.certpath.Vertex;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
 /**
  * TODO: @Sven: Implement
@@ -43,6 +35,7 @@ public class RDF4JQuadSource implements IQuintSource {
     public RDF4JQuadSource(String repositoryURL, String repositoryID) {
         this.repositoryURL = repositoryURL;
         this.repositoryID = repositoryID;
+        this.listeners = new LinkedList<>();
     }
 
 
@@ -69,7 +62,7 @@ public class RDF4JQuadSource implements IQuintSource {
 
         //get all subject URIs
         //TODO check if Hashset or List
-        HashSet<String> subjectURIs =  getAllSubjectURIs(con);
+        HashSet<String> subjectURIs = getAllSubjectURIs(con);
 
 
         if (subjectURIs == null || subjectURIs.isEmpty()) {
@@ -162,7 +155,7 @@ public class RDF4JQuadSource implements IQuintSource {
             while (result.hasNext()) {
                 BindingSet solution = result.next();
                 // ... and print out the value of the variable binding for ?s and ?n
-                System.out.println("Subject = " + solution.getValue("subject") + " Predicate = "+ solution.getValue("predicate")+ " Object = "+ solution.getValue("Object")+ " Context = "+ solution.getValue("Context"));
+                System.out.println("Subject = " + solution.getValue("subject") + " Predicate = " + solution.getValue("predicate") + " Object = " + solution.getValue("Object") + " Context = " + solution.getValue("Context"));
 //                allSubjects.add(solution.getValue("subject").stringValue());
             }
         }
