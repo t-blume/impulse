@@ -1,5 +1,6 @@
 package main.java.output.implementation;
 
+import com.fasterxml.jackson.core.json.UTF8DataInputJsonParser;
 import main.java.common.interfaces.IQuint;
 import main.java.input.implementation.RDF4JQuadSource;
 import main.java.output.interfaces.IQuadSink;
@@ -10,10 +11,17 @@ import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.repository.http.HTTPRepository;
 import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFParseException;
+import org.eclipse.rdf4j.rio.RDFParser;
+import org.eclipse.rdf4j.rio.Rio;
+import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 public class RDF4QuadSink implements IQuadSink {
 
@@ -31,7 +39,7 @@ public class RDF4QuadSink implements IQuadSink {
     public RepositoryConnection conn;
 
     public RDF4QuadSink(String URL, String ID) {
-        logger.debug("Opening Connection to " +  URL + " (" + ID + ")");
+        logger.debug("Opening Connection to " + URL + " (" + ID + ")");
         this.repo = new HTTPRepository(URL, ID);
         repo.init();
         this.conn = repo.getConnection();
@@ -39,37 +47,48 @@ public class RDF4QuadSink implements IQuadSink {
 
     @Override
     public boolean addQuint(IQuint quint) {
-        return addStream(quint.getSubject().toN3(), quint.getPredicate().toN3(), quint.getObject().toN3());
+        return addStream(quint.getSubject().toN3(), quint.getPredicate().toN3(), quint.getObject().toN3(), quint.getContext().toN3());
 
     }
 
     @Override
     public void finished() {
-        logger.info("Closing connection..." );
+        logger.info("Closing connection...");
         conn.close();
     }
 
 
-    private boolean addStream(String subject, String predicate, String object) {
+    private boolean addStream(String subject, String predicate, String object, String context) {
         StringBuilder sb = new StringBuilder();
-        sb.append(subject + " " + " " + predicate + " " + object + " .\n");
+
+
+        sb.append(subject + " " + " " + predicate + " " + object + " " + context + " .\n");
+
+
+
         sbf.append(sb);
         int len = BUFF_SIZE * MAX_STRING_LENGTH - sbf.length();
         min = Math.min(min, len);
         if (addCount % BUFF_SIZE == 0) {
-            InputStream in = new ByteArrayInputStream(sbf.toString().getBytes());
+            InputStream in = null;
+
+            in = new ByteArrayInputStream(sbf.toString().getBytes());
+
+
             try {
                 conn.begin();
-                conn.add(in, null, RDFFormat.NTRIPLES);
+                conn.add(in, null, RDFFormat.NQUADS);
                 conn.commit();
-            } catch (RepositoryException | IOException e) {
+            } catch (RepositoryException | IOException | RDFParseException e) {
                 logger.error("printTriple() Exception thrown  :" + e);
                 logger.debug(sbf.toString());
                 System.exit(-1);
+
             }
             // reset stream
             sbf.setLength(0);
         }
         return true;
     }
+
 }

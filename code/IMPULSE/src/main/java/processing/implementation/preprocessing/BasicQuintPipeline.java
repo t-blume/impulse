@@ -8,6 +8,7 @@ import main.java.processing.interfaces.IQuintProcessor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.net.URISyntaxException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,10 +38,11 @@ public class BasicQuintPipeline implements IQuintPipeline, IQuintSourceListener 
     }
 
     @Override
-    public void process(IQuint i) {
+    public void process(IQuint i) throws URISyntaxException {
         Queue<IQuint> temp = new ArrayDeque<>();
         Queue<IQuint> current = new ArrayDeque<>();
 
+        //System.out.println("Quint: " + i);
         temp.add(i);
         for (IQuintProcessor p : processors) {
             while (!temp.isEmpty()) {
@@ -58,6 +60,8 @@ public class BasicQuintPipeline implements IQuintPipeline, IQuintSourceListener 
             temp = current;
             current = swap;
         }
+
+
         for (IQuint q : temp)
             notifyListeners(q);
 
@@ -91,12 +95,16 @@ public class BasicQuintPipeline implements IQuintPipeline, IQuintSourceListener 
 
     @Override
     public void pushedQuint(IQuint quint) {
-        process(quint);
+        try {
+            process(quint);
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void microBatch() {
-        logger.debug("Micro batch initiated");
+      //  logger.debug("Micro batch initiated");
         for (IQuintListener l : listeners)
             l.microBatch();
     }

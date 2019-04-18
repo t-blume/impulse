@@ -19,11 +19,9 @@ import main.java.processing.implementation.parsing.MOVINGParser;
 import main.java.processing.implementation.preprocessing.*;
 import main.java.processing.interfaces.IElementCache;
 import org.apache.commons.cli.*;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jsoup.helper.StringUtil;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import java.io.*;
@@ -37,11 +35,14 @@ import static main.java.utils.MainUtils.*;
 public class Main {
     private static final Logger logger = LogManager.getLogger(Main.class.getSimpleName());
 
+
     public enum RDFRepository {
         RDF4J
     }
 
     public static void main(String[] args) {
+
+
         logger.debug(Arrays.toString(args));
         // JUL to slf4j logging bridge needed for nxparser logging
         SLF4JBridgeHandler.removeHandlersForRootLogger();
@@ -72,7 +73,7 @@ public class Main {
 
 
         ///////////////////////////////////////////////////////////////////////
-        Option fixLiterals = new Option("fl", "fix", false, "try to fix literals");
+        Option fixLiterals = new Option("fb", "fixBlankNodes", false, "try to fix Blank Nodes");
         options.addOption(fixLiterals);
         ///////////////////////////////////////////////////////////////////////
         Option inputDirectoryFilter = new Option("if", "inputFilter", true, "regex pattern to filter filenames");
@@ -201,12 +202,12 @@ public class Main {
 
 
         //mute System errors from NxParser for normal procedure
-//        if (!logger.getLevel().isLessSpecificThan(Level.TRACE))
-//            System.setErr(new PrintStream(new OutputStream() {
-//                @Override
-//                public void write(int b) {
-//                }
-//            }));
+        if (!logger.getLevel().isLessSpecificThan(Level.TRACE))
+            System.setErr(new PrintStream(new OutputStream() {
+                @Override
+                public void write(int b) {
+                }
+            }));
 
         //get input files
         if (cmd.hasOption("f")) {
@@ -326,8 +327,8 @@ public class Main {
         /*
          * filter fix literals
          */
-        preprocessingPipelineContext.addProcessor(new FixLiterals(cmd.hasOption("fl")));
-        preprocessingPipelinePLD.addProcessor(new FixLiterals(cmd.hasOption("fl")));
+        preprocessingPipelineContext.addProcessor(new FixBNodes(cmd.hasOption("fb"), "http://harverster.informatik.uni-kiel.de/"));
+        preprocessingPipelinePLD.addProcessor(new FixBNodes(cmd.hasOption("fb"), "http://harverster.informatik.uni-kiel.de/"));
 
 
         preprocessingPipelineContext.addProcessor(new ContextFilter(datasourceURIs));
@@ -374,7 +375,9 @@ public class Main {
                 }
             });
             quintSource.start();
-
+//            logger.debug("Removed Quints: " + FixBNodes.getRemovedQuints());
+//            logger.debug("Fixed Quints: " + FixBNodes.getFixedLiterals());
+            logger.debug("Fixed BlankNodes: " + FixBNodes.getFixedBlankNodes());
         } else {
             logger.debug("Starting in \"process\"-mode....");
 

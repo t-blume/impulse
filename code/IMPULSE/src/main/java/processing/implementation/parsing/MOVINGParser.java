@@ -147,11 +147,9 @@ public class MOVINGParser {
 
         // check if the mandatory attributes are present
 
-        if (!testInstance(instanceElement))
-            return null;
+//        if (!testInstance(instanceElement))
+//            return null;
 
-
-        // System.out.println(instanceElement);
         DataItem dataItem = new DataItem();
         dataItem.setSourceURLs(new HashSet<>());
 
@@ -909,6 +907,7 @@ public class MOVINGParser {
         if (instanceElement == null)
             return null;
         for (IQuint quint : instanceElement.getOutgoingQuints())
+//            contexts.merge(quint.getSubject().toString(), 1, (OLD, NEW) -> OLD + NEW);
             contexts.merge(quint.getContext().toString(), 1, (OLD, NEW) -> OLD + NEW);
 
         String maxK = null;

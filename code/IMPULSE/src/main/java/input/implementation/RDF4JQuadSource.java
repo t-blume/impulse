@@ -1,22 +1,32 @@
 package main.java.input.implementation;
 
+import main.java.common.implementation.NodeResource;
 import main.java.common.implementation.Quad;
+import main.java.common.interfaces.IQuint;
 import main.java.input.interfaces.IQuintSource;
 import main.java.input.interfaces.IQuintSourceListener;
+import main.java.utils.MainUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.TupleQuery;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
+import org.eclipse.rdf4j.repository.RepositoryException;
+import org.eclipse.rdf4j.repository.RepositoryResult;
 import org.eclipse.rdf4j.repository.http.HTTPRepository;
+import org.eclipse.rdf4j.rio.RDFParseException;
+import org.semanticweb.yars.nx.Resource;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.*;
 
 /**
  * TODO: @Sven: Implement
@@ -31,6 +41,8 @@ public class RDF4JQuadSource implements IQuintSource {
     private String repositoryURL;
     private String repositoryID;
     Repository repo;
+    RepositoryConnection connection;
+    private HashSet<String> check = new HashSet<>();
 
     public RDF4JQuadSource(String repositoryURL, String repositoryID) {
         this.repositoryURL = repositoryURL;
@@ -44,7 +56,14 @@ public class RDF4JQuadSource implements IQuintSource {
      */
     @Override
     public void close() throws IOException {
+
+
         logger.info("Source closed, processed " + counter + " quints");
+
+        for (IQuintSourceListener i : listeners)
+            i.sourceClosed();
+
+        connection.close();
         //TODO close all open connections
     }
 
@@ -55,15 +74,13 @@ public class RDF4JQuadSource implements IQuintSource {
         //TODO: Opens a connections to the repository
 
         this.repo = new HTTPRepository(repositoryURL, repositoryID);
-//        repo.initialize();
+        this.connection = repo.getConnection();
         repo.init();
-        RepositoryConnection con = repo.getConnection();
 
 
         //get all subject URIs
         //TODO check if Hashset or List
-        HashSet<String> subjectURIs = getAllSubjectURIs(con);
-
+        HashSet<String> subjectURIs = getAllSubjectURIs(connection);
 
         if (subjectURIs == null || subjectURIs.isEmpty()) {
             logger.info("Empty Repository provided!");
@@ -74,18 +91,24 @@ public class RDF4JQuadSource implements IQuintSource {
             }
         }
         //start iterating through the whole repository
-        for (String subjectURI : subjectURIs) {
-            //retrieves all quads (recursively) related to the subject URI and sends
-            //them to teh listener
-            getAllQuadsForSubjectRecursive(getAllQuadsForSubject(subjectURI, con));
-            //signal that now all relevant information is in the instance cache
-            for (IQuintSourceListener l : listeners)
-                l.microBatch();
-        }
-        try {
-            close();
-        } catch (IOException e) {
-            logger.error(e.getLocalizedMessage());
+        if (subjectURIs != null) {
+            for (String subjectURI : subjectURIs) {
+                //retrieves all quads (recursively) related to the subject URI and sends
+                //them to teh listener
+                getAllQuadsForSubjectRecursive(getAllQuadsForSubject(subjectURI));
+
+//                getAllInstanceInformation(subjectURI);
+                //signal that now all relevant information is in the instance cache
+                for (IQuintSourceListener l : listeners)
+                    l.microBatch();
+            }
+            try {
+                close();
+            } catch (IOException e) {
+                logger.error(e.getLocalizedMessage());
+            }
+        } else {
+            logger.debug("Something went wrong..");
         }
     }
 
@@ -125,7 +148,7 @@ public class RDF4JQuadSource implements IQuintSource {
             while (result.hasNext()) {
                 BindingSet solution = result.next();
                 // ... and print out the value of the variable binding for ?s and ?n
-                System.out.println("Subject = " + solution.getValue("subject"));
+
                 allSubjects.add(solution.getValue("subject").stringValue());
             }
         }
@@ -140,33 +163,45 @@ public class RDF4JQuadSource implements IQuintSource {
      * @param subjectURI
      * @return
      */
-    private Set<Quad> getAllQuadsForSubject(String subjectURI, RepositoryConnection conn) {
+    private Set<Quad> getAllQuadsForSubject(String subjectURI) {
         //TODO retrieve all quads
 
+        IRI subject = repo.getValueFactory().createIRI(subjectURI.toLowerCase());
 
-        String queryString = "SELECT ?subject ?predicate ?object ?context \n";
-        queryString += "WHERE {?subject:" + subjectURI + "} \n";
+        List<Quad> quints = new ArrayList<>();
 
-        TupleQuery query = conn.prepareTupleQuery(queryString);
+        try {
+            RepositoryResult<Statement> statements = connection.getStatements(subject, null, null);
 
-        // A QueryResult is also an AutoCloseable resource, so make sure it gets closed when done.
-        try (TupleQueryResult result = query.evaluate()) {
-            // we just iterate over all solutions in the result...
-            while (result.hasNext()) {
-                BindingSet solution = result.next();
-                // ... and print out the value of the variable binding for ?s and ?n
-                System.out.println("Subject = " + solution.getValue("subject") + " Predicate = " + solution.getValue("predicate") + " Object = " + solution.getValue("Object") + " Context = " + solution.getValue("Context"));
-//                allSubjects.add(solution.getValue("subject").stringValue());
+
+            if (statements != null) {
+
+                while (statements.hasNext()) {
+                    Statement statement = statements.next();
+                    quints.add(new Quad(new NodeResource(new org.semanticweb.yars.nx.Resource(statement.getSubject().stringValue())),
+                            new NodeResource(new org.semanticweb.yars.nx.Resource(statement.getPredicate().stringValue())),
+                            new NodeResource(new Resource(statement.getObject().stringValue())),
+                            new NodeResource(new Resource(statement.getContext().stringValue()))));
+
+
+                }
             }
-        }
+            Set<Quad> retrievedQuads = new HashSet<>();
+            retrievedQuads.addAll(quints);
 
-        Set<Quad> retrievedQuads = new HashSet<>();
-        //notify listeners of new quad
-        counter += retrievedQuads.size();
-        retrievedQuads.forEach(Q -> {
-            for (IQuintSourceListener l : listeners)
-                l.pushedQuint(Q);
-        });
+            //notify listeners of new quad
+                counter += retrievedQuads.size();
+                retrievedQuads.forEach(Q -> {
+                    for (IQuintSourceListener l : listeners) {
+                        l.pushedQuint(Q);
+                    }
+                });
+
+
+            return retrievedQuads;
+        } catch (RepositoryException e) {
+            e.printStackTrace();
+        }
 
         return null;
     }
@@ -179,14 +214,34 @@ public class RDF4JQuadSource implements IQuintSource {
      * @return
      */
     private void getAllQuadsForSubjectRecursive(Set<Quad> inputQuads) {
-        if (inputQuads == null)
+
+        if (inputQuads ==null)
             return;
+
 
         for (Quad inputQuad : inputQuads) {
             //TODO: could be literal, only handle valid URIs
             //TODO: watch out for the < >
-            Set<Quad> tmpQuads = getAllQuadsForSubject(inputQuad.getObject().toString(), null);
-            getAllQuadsForSubjectRecursive(tmpQuads);
+
+            if (isValidURL(inputQuad.getObject().toString())) {
+
+                if (!check.contains(inputQuad.getObject().toN3())) {
+                    check.add(inputQuad.getObject().toN3());
+                    Set<Quad> tmpQuads = getAllQuadsForSubject(inputQuad.getObject().toString());
+                    getAllQuadsForSubjectRecursive(tmpQuads);
+                }
+
+            }
+        }
+    }
+
+    public static boolean isValidURL(String urlString) {
+        try {
+            URL url = new URL(urlString);
+            url.toURI();
+            return true;
+        } catch (Exception exception) {
+            return false;
         }
     }
 }

@@ -32,17 +32,15 @@ public class PLDFilter implements IQuintProcessor {
     }
 
     @Override
-    public List<IQuint> processQuint(IQuint q) {
+    public List<IQuint> processQuint(IQuint q) throws URISyntaxException {
         List<IQuint> quints = new LinkedList<>();
-        try {
+
             if (paylevelDomains.contains(new URI(q.getContext().toString()).getHost()))
                 quints.add(q);
             else
                 counter++;
+            quints.add(q);
 
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
         return quints;
     }
 

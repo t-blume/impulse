@@ -3,6 +3,7 @@ package main.java.processing.interfaces;
 
 import main.java.common.interfaces.IQuint;
 
+import java.net.URISyntaxException;
 import java.util.List;
 
 /**
@@ -24,7 +25,7 @@ public interface IQuintProcessor {
 	 *            The quint to be processed
 	 * @return A list containing the emitted quint
 	 */
-	List<IQuint> processQuint(IQuint q);
+	List<IQuint> processQuint(IQuint q) throws URISyntaxException;
 
 	/**
 	 * Give the processors the chance to print statistics etc.

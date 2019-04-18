@@ -33,13 +33,15 @@ public class Harvester implements IElementCacheListener<IInstanceElement> {
     @Override
     public void elementFlushed(IInstanceElement instance) {
         //System.out.println(instance);
+//        System.out.println(instance);
         DataItem dataItem = parser.convertInstance2JSON(instance);
 
 
 
 
-        if(dataItem != null) {
+        if(dataItem != null && dataItem.getMetadataPersons() !=null) {
             jsonCache.add(dataItem);
+
             successfull++;
         }else
             errornous++;

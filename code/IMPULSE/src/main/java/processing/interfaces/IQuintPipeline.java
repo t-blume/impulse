@@ -3,6 +3,7 @@ package main.java.processing.interfaces;
 import main.java.common.interfaces.IQuint;
 import main.java.input.interfaces.IQuintListener;
 
+import java.net.URISyntaxException;
 import java.util.List;
 
 /**
@@ -25,7 +26,7 @@ public interface IQuintPipeline {
 	 * @param i
 	 *            The quint to be processed
 	 */
-	void process(IQuint i);
+	void process(IQuint i) throws URISyntaxException;
 
 	/**
 	 * Add a processor. The order in which the processors were added should be

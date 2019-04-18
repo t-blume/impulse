@@ -22,6 +22,7 @@ public class ContextFilter implements IQuintProcessor {
     @Override
     public List<IQuint> processQuint(IQuint q) {
         List<IQuint> quints = new LinkedList<>();
+        quints.add(q);
         if(contexts.contains(q.getContext().toString()))
             quints.add(q);
         else
