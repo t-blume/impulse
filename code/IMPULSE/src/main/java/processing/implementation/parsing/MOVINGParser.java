@@ -150,6 +150,8 @@ public class MOVINGParser {
 //        if (!testInstance(instanceElement))
 //            return null;
 
+
+//        System.out.println(instanceElement.getOutgoingQuints());
         DataItem dataItem = new DataItem();
         dataItem.setSourceURLs(new HashSet<>());
 

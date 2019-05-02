@@ -18,7 +18,8 @@ public class DataItemCache implements IParsedItemCache<DataItem> {
 
     private List<IJsonSink> sinks;
     private LinkedHashSet<DataItem> set;
-    public DataItemCache(){
+
+    public DataItemCache() {
 //        set = HashObjSets.newUpdatableSet();
         set = new LinkedHashSet<>();
         sinks = new LinkedList<>();
@@ -26,7 +27,9 @@ public class DataItemCache implements IParsedItemCache<DataItem> {
 
     @Override
     public void add(DataItem item) {
-        set.add(item);
+
+        if (item.getMetadataPersons() != null)
+            set.add(item);
     }
 
     @Override
@@ -36,7 +39,7 @@ public class DataItemCache implements IParsedItemCache<DataItem> {
 
     @Override
     public DataItem removeNext() {
-        return set.iterator().hasNext()? set.iterator().next() : null;
+        return set.iterator().hasNext() ? set.iterator().next() : null;
     }
 
     @Override
@@ -50,7 +53,10 @@ public class DataItemCache implements IParsedItemCache<DataItem> {
                 e.printStackTrace();
             }
         });
-        sinks.forEach(S -> {S.bulkExport(exportList); S.close();});
+        sinks.forEach(S -> {
+            S.bulkExport(exportList);
+            S.close();
+        });
     }
 
     @Override

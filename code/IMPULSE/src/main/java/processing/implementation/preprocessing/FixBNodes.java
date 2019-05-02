@@ -28,11 +28,14 @@ import org.apache.jena.iri.IRI;
 import org.apache.jena.iri.IRIFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.semanticweb.yars.nx.BNode;
 import org.semanticweb.yars.nx.Resource;
 
 import java.io.UnsupportedEncodingException;
 import java.util.LinkedList;
 import java.util.List;
+
+import static main.java.utils.MainUtils.editStrings;
 
 
 public class FixBNodes implements IQuintProcessor {
@@ -58,11 +61,21 @@ public class FixBNodes implements IQuintProcessor {
 
         //It is an older code, Sir, but it checks out
         if (tryFix) {
-            IResource c = deanon(q.getContext(), new NodeResource(new Resource(prefix)));
-            IResource s = deanon(q.getSubject(), c);
-            IResource p = deanon(q.getPredicate(), c);
-            IResource o = deanon(q.getObject(), c);
-            IQuint fixedQuint = new Quad(s, p, o, c);
+
+            NodeResource c = (NodeResource) q.getContext();
+            NodeResource s = (NodeResource) q.getSubject();
+            NodeResource p = (NodeResource) q.getPredicate();
+            NodeResource o = (NodeResource) q.getObject();
+
+
+            IResource context = deanon(c, new NodeResource(new Resource(prefix)));
+            IResource subject = deanon(s, c);
+            IResource predicate = deanon(p, c);
+            IResource object = deanon(o, c);
+
+
+            IQuint fixedQuint = new Quad(subject, predicate, object, context);
+
             quints.add(fixedQuint);
         } else
             quints.add(q);
@@ -70,9 +83,15 @@ public class FixBNodes implements IQuintProcessor {
         return quints;
     }
 
-    private IResource deanon(IResource resource, IResource context) {
+    private IResource deanon(NodeResource resource, IResource context) {
         String resourceText = resource.toString();
-        if (!resourceText.matches("(http(s)?|(ftp)):\\/\\/.*")) {
+
+
+      //  if (resource.getNode() instanceof BNode) {
+        if (resource.getNode().toString().startsWith("<_:")){
+
+
+//        if (!resourceText.matches("(http(s)?|(ftp)):\\/\\/.*")) {
             String newPrefix;
             if (context != null) {
                 newPrefix = context.toString();

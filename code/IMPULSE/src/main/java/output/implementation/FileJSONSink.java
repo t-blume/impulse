@@ -36,12 +36,12 @@ public class FileJSONSink implements IJsonSink {
 
     public FileJSONSink(PrintStream pw) {
         this.pw = pw;
-        pw.print("[");
+//        pw.print("\n");
     }
 
     @Override
     public boolean close() {
-        pw.print("]");
+//        pw.print("\n");
         pw.close();
         logger.info("Exported " + count + " data items!");
         return true;
@@ -57,7 +57,7 @@ public class FileJSONSink implements IJsonSink {
             logger.debug("Printed data item: "+count+"\r");
 
         if (count > 1) //printing an json array
-            jsonString = "," + jsonString;
+//            jsonString = jsonString ;
 
         pw.println(jsonString);
         return true;

@@ -202,12 +202,12 @@ public class Main {
 
 
         //mute System errors from NxParser for normal procedure
-        if (!logger.getLevel().isLessSpecificThan(Level.TRACE))
-            System.setErr(new PrintStream(new OutputStream() {
-                @Override
-                public void write(int b) {
-                }
-            }));
+//        if (!logger.getLevel().isLessSpecificThan(Level.TRACE))
+//            System.setErr(new PrintStream(new OutputStream() {
+//                @Override
+//                public void write(int b) {
+//                }
+//            }));
 
         //get input files
         if (cmd.hasOption("f")) {
@@ -330,13 +330,29 @@ public class Main {
         preprocessingPipelineContext.addProcessor(new FixBNodes(cmd.hasOption("fb"), "http://harverster.informatik.uni-kiel.de/"));
         preprocessingPipelinePLD.addProcessor(new FixBNodes(cmd.hasOption("fb"), "http://harverster.informatik.uni-kiel.de/"));
 
+        if (loadOnly)
+            preprocessingPipelineContext.addProcessor(new ContextFilter(datasourceURIs));
 
-        preprocessingPipelineContext.addProcessor(new ContextFilter(datasourceURIs));
-        if (usePLDFilter)
+
+        if(loadOnly && usePLDFilter)
             preprocessingPipelinePLD.addProcessor(new PLDFilter(datasourceURIs));
 
+
+        if(!loadOnly)
+            preprocessingPipelineContext.addProcessor(new ContextFilter(datasourceURIs));
+
+        if(!loadOnly&&usePLDFilter)
+            preprocessingPipelinePLD.addProcessor(new PLDFilter(datasourceURIs));
+
+
+
+
+//        if (usePLDFilter)
+//        preprocessingPipelinePLD.addProcessor(new PLDFilter(datasourceURIs));
+
         // all quints have to pass the pre-processing pipeline
-        quintSource.registerQuintListener(preprocessingPipelineContext);
+        if (!loadOnly)
+            quintSource.registerQuintListener(preprocessingPipelineContext);
 
         if (usePLDFilter)
             quintSource.registerQuintListener(preprocessingPipelinePLD);
@@ -351,7 +367,8 @@ public class Main {
             ////////////////////// <--------- load repository
             IQuadSink finalQuadSink = quadSink;
 
-            preprocessingPipelineContext.registerQuintListener(new IQuintListener() {
+            preprocessingPipelinePLD.registerQuintListener(new IQuintListener() {
+                //            preprocessingPipelineContext.registerQuintListener(new IQuintListener() {
                 long success = 0;
                 long failed = 0;
 
@@ -370,6 +387,7 @@ public class Main {
 
                 @Override
                 public void finished() {
+                    RDF4QuadSink.upload();
                     finalQuadSink.finished();
                     logger.info("Added " + success + " to repository, " + failed + " failed!");
                 }

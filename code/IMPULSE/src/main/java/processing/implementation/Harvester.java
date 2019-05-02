@@ -24,7 +24,8 @@ public class Harvester implements IElementCacheListener<IInstanceElement> {
 
     int successfull = 0;
     int errornous = 0;
-    public Harvester(MOVINGParser parser, DataItemCache jsonCache){
+
+    public Harvester(MOVINGParser parser, DataItemCache jsonCache) {
         this.parser = parser;
         this.jsonCache = jsonCache;
     }
@@ -32,19 +33,16 @@ public class Harvester implements IElementCacheListener<IInstanceElement> {
 
     @Override
     public void elementFlushed(IInstanceElement instance) {
-        //System.out.println(instance);
-//        System.out.println(instance);
+//        System.out.println(instance.getLocator());
+//        System.out.println(instance.getOutgoingQuints());
         DataItem dataItem = parser.convertInstance2JSON(instance);
 
-
-
-
-        if(dataItem != null && dataItem.getMetadataPersons() !=null) {
-            jsonCache.add(dataItem);
-
-            successfull++;
-        }else
-            errornous++;
+            if (dataItem != null && dataItem.getMetadataPersons()!=null) {
+                jsonCache.add(dataItem);
+//                jsonCache.flush();
+                successfull++;
+            } else
+                errornous++;
 
     }
 
@@ -53,7 +51,7 @@ public class Harvester implements IElementCacheListener<IInstanceElement> {
 
         //parser.newData.forEach(x-> System.out.println(x));
 
-        logger.info("Harvesting of "+successfull+"/"+(successfull + errornous) +" finished successfully, flushing to sinks...");
+        logger.info("Harvesting of " + successfull + "/" + (successfull + errornous) + " finished successfully, flushing to sinks...");
         jsonCache.flush();
     }
 }

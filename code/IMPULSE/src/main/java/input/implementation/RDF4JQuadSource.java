@@ -5,8 +5,6 @@ import main.java.common.implementation.Quad;
 import main.java.common.interfaces.IQuint;
 import main.java.input.interfaces.IQuintSource;
 import main.java.input.interfaces.IQuintSourceListener;
-import main.java.utils.MainUtils;
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.rdf4j.model.IRI;
@@ -19,12 +17,9 @@ import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.repository.RepositoryResult;
 import org.eclipse.rdf4j.repository.http.HTTPRepository;
-import org.eclipse.rdf4j.rio.RDFParseException;
 import org.semanticweb.yars.nx.Resource;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
 
@@ -38,11 +33,13 @@ public class RDF4JQuadSource implements IQuintSource {
 
     private List<IQuintSourceListener> listeners;
     private int counter = 0;
+    private int counterInstances = 0;
     private String repositoryURL;
     private String repositoryID;
     Repository repo;
     RepositoryConnection connection;
     private HashSet<String> check = new HashSet<>();
+    private HashSet<IQuint> instanceQuads = new HashSet<>();
 
     public RDF4JQuadSource(String repositoryURL, String repositoryID) {
         this.repositoryURL = repositoryURL;
@@ -81,7 +78,7 @@ public class RDF4JQuadSource implements IQuintSource {
         //get all subject URIs
         //TODO check if Hashset or List
         HashSet<String> subjectURIs = getAllSubjectURIs(connection);
-
+        logger.debug("Collected all SubjectsURIs: " + subjectURIs.size());
         if (subjectURIs == null || subjectURIs.isEmpty()) {
             logger.info("Empty Repository provided!");
             try {
@@ -93,15 +90,47 @@ public class RDF4JQuadSource implements IQuintSource {
         //start iterating through the whole repository
         if (subjectURIs != null) {
             for (String subjectURI : subjectURIs) {
+//                if (counterInstances % 1000 == 0)
+                logger.debug("Instance " + counterInstances + " / " + subjectURIs.size() + "!");
+
+
                 //retrieves all quads (recursively) related to the subject URI and sends
                 //them to teh listener
+                counter = 0;
+                counterInstances++;
+                instanceQuads = new HashSet<>();
+
+
+                //check is a HashSet to prevent unnecessary and duplicate entries from being fetched
+                check = new HashSet<>();
                 getAllQuadsForSubjectRecursive(getAllQuadsForSubject(subjectURI));
 
-//                getAllInstanceInformation(subjectURI);
+//                fillSet(subjectURI);
+
+//                instanceQuads.forEach(Q -> {
+//                    for (IQuintSourceListener l : listeners) {
+//                        l.pushedQuint(Q);
+//                    }
+//                });
+
+
+//                findGraph();
+
+
+
+
+
                 //signal that now all relevant information is in the instance cache
                 for (IQuintSourceListener l : listeners)
                     l.microBatch();
+
+
+//                if (counterInstances == 100)
+//                    break;
+
             }
+
+
             try {
                 close();
             } catch (IOException e) {
@@ -110,6 +139,66 @@ public class RDF4JQuadSource implements IQuintSource {
         } else {
             logger.debug("Something went wrong..");
         }
+    }
+
+
+    //Ignore this was second attempt, but same result
+    private void findGraph(List<Quad> quints) {
+
+        if (quints.isEmpty() || quints == null || quints.size() == 0) {
+//            logger.debug("break");
+            return;
+        }
+
+        instanceQuads.addAll(quints);
+
+
+        for (IQuint inputQuad : quints) {
+            if (isValidURL(inputQuad.getObject().toString())) {
+                if (!check.contains(inputQuad.getObject().toN3())) {
+                    check.add(inputQuad.getObject().toN3());
+                    fillSet(inputQuad.getObject().toString());
+                }
+            }
+        }
+    }
+
+    //Ignore this was second attempt, but same result
+    private void fillSet(String subjectURI) {
+        IRI subject = repo.getValueFactory().createIRI(subjectURI);
+
+        List<Quad> quints = new ArrayList<>();
+        try {
+
+            RepositoryResult<Statement> statements = connection.getStatements(subject, null, null);
+
+            if (statements != null) {
+
+                while (statements.hasNext()) {
+                    Statement statement = statements.next();
+                    quints.add(new Quad(new NodeResource(new org.semanticweb.yars.nx.Resource(statement.getSubject().stringValue())),
+                            new NodeResource(new org.semanticweb.yars.nx.Resource(statement.getPredicate().stringValue())),
+                            new NodeResource(new Resource(statement.getObject().stringValue())),
+                            new NodeResource(new Resource(statement.getContext().stringValue()))));
+
+
+                }
+            } else {
+                logger.debug("No statements found for subject: " + subjectURI);
+                return;
+            }
+
+
+            findGraph(quints);
+
+//            instanceQuads.addAll(quints);
+
+//            findGraph(quints);
+        } catch (RepositoryException e) {
+            e.printStackTrace();
+        }
+
+
     }
 
 
@@ -148,7 +237,7 @@ public class RDF4JQuadSource implements IQuintSource {
             while (result.hasNext()) {
                 BindingSet solution = result.next();
                 // ... and print out the value of the variable binding for ?s and ?n
-
+//                logger.debug(solution.getValue("subject").stringValue());
                 allSubjects.add(solution.getValue("subject").stringValue());
             }
         }
@@ -166,13 +255,13 @@ public class RDF4JQuadSource implements IQuintSource {
     private Set<Quad> getAllQuadsForSubject(String subjectURI) {
         //TODO retrieve all quads
 
-        IRI subject = repo.getValueFactory().createIRI(subjectURI.toLowerCase());
+        IRI subject = repo.getValueFactory().createIRI(subjectURI);
 
         List<Quad> quints = new ArrayList<>();
 
         try {
-            RepositoryResult<Statement> statements = connection.getStatements(subject, null, null);
 
+            RepositoryResult<Statement> statements = connection.getStatements(subject, null, null);
 
             if (statements != null) {
 
@@ -190,16 +279,18 @@ public class RDF4JQuadSource implements IQuintSource {
             retrievedQuads.addAll(quints);
 
             //notify listeners of new quad
-                counter += retrievedQuads.size();
-                retrievedQuads.forEach(Q -> {
-                    for (IQuintSourceListener l : listeners) {
-                        l.pushedQuint(Q);
-                    }
-                });
+            counter += retrievedQuads.size();
+
+            retrievedQuads.forEach(Q -> {
+                for (IQuintSourceListener l : listeners) {
+                    l.pushedQuint(Q);
+                }
+            });
 
 
             return retrievedQuads;
         } catch (RepositoryException e) {
+
             e.printStackTrace();
         }
 
@@ -215,9 +306,13 @@ public class RDF4JQuadSource implements IQuintSource {
      */
     private void getAllQuadsForSubjectRecursive(Set<Quad> inputQuads) {
 
-        if (inputQuads ==null)
+        //termination condition
+        if (inputQuads.size() == 0 ||inputQuads.isEmpty() || inputQuads == null) {
             return;
+        }
 
+
+//        logger.debug("InputQuad Size: " + inputQuads.size());
 
         for (Quad inputQuad : inputQuads) {
             //TODO: could be literal, only handle valid URIs
@@ -234,6 +329,7 @@ public class RDF4JQuadSource implements IQuintSource {
             }
         }
     }
+
 
     public static boolean isValidURL(String urlString) {
         try {

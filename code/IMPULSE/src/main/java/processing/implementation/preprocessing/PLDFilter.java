@@ -39,7 +39,6 @@ public class PLDFilter implements IQuintProcessor {
                 quints.add(q);
             else
                 counter++;
-            quints.add(q);
 
         return quints;
     }
