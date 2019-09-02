@@ -3,6 +3,8 @@ package main.java.common.implementation;
 import main.java.common.interfaces.IResource;
 import org.semanticweb.yars.nx.Node;
 
+import java.io.Serializable;
+
 
 /**
  * A resource containing a {@link Node} provided by the NxParser framework
@@ -10,7 +12,7 @@ import org.semanticweb.yars.nx.Node;
  * @author Bastian
  *
  */
-public class NodeResource implements IResource {
+public class NodeResource implements IResource, Serializable {
 	private Node res;
 
 	/**

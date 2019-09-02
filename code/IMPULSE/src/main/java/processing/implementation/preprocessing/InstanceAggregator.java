@@ -12,54 +12,54 @@ import org.apache.logging.log4j.Logger;
 
 /**
  * Aggregates information of instances
- * 
+ *
  * @author Bastian
  * @editor Till
  */
 public class InstanceAggregator implements IQuintListener {
-	private static final Logger logger = LogManager.getLogger(InstanceAggregator.class.getSimpleName());
-	
-	private IElementCache<IInstanceElement> window;
+    private static final Logger logger = LogManager.getLogger(InstanceAggregator.class.getSimpleName());
 
-	/**
-	 *
-	 * @param window
-	 */
-	public InstanceAggregator(IElementCache<IInstanceElement> window) {
-		this.window = window;
-	}
+    private IElementCache<IInstanceElement> window;
 
-	@Override
-	public void finishedQuint(IQuint i) {
-		addQuint2Cache(i, true);
-	}
+    /**
+     * @param window
+     */
+    public InstanceAggregator(IElementCache<IInstanceElement> window) {
+        this.window = window;
+    }
 
-	@Override
-	public void microBatch() {
-		//flushes all instances out of the window, clears window afterwards to safe space
-		window.flush(true);
-	}
+    @Override
+    public void finishedQuint(IQuint i) {
+        addQuint2Cache(i, true);
+    }
 
-	protected IInstanceElement createInstance(IQuint quint){
-		return new RDFInstance(quint.getSubject());
-	}
+    @Override
+    public void microBatch() {
+        //flushes all instances out of the window, clears window afterwards to safe space
+        window.flush(true);
+    }
 
-	protected void addQuint2Cache(IQuint quint, boolean asOutgoing){
-		IInstanceElement element = createInstance(quint);
-		if (window.contains(element.getLocator()))
-			element = window.get(element.getLocator());
-		else
-			window.add(element);
+    protected IInstanceElement createInstance(IQuint quint) {
+        return new RDFInstance(quint.getSubject());
+    }
 
-		if(asOutgoing)
-			element.addOutgoingQuint(quint);
-		else
-			element.addIncomingQuint(quint);
-	}
+    protected void addQuint2Cache(IQuint quint, boolean asOutgoing) {
 
-	@Override
-	public void finished() {
-		logger.debug("Finished aggregating");
-		window.close();
-	}
+        IInstanceElement element = createInstance(quint);
+        if (window.contains(element.getLocator()))
+            element = window.get(element.getLocator());
+
+        if (asOutgoing)
+            element.addOutgoingQuint(quint);
+        else
+            element.addIncomingQuint(quint);
+
+        window.add(element);
+    }
+
+    @Override
+    public void finished() {
+        logger.debug("Finished aggregating");
+        window.close();
+    }
 }

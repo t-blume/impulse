@@ -4,6 +4,8 @@ import main.java.common.interfaces.IQuint;
 import main.java.common.interfaces.IResource;
 import main.java.common.interfaces.ITimestamp;
 
+import java.io.Serializable;
+
 /**
  * Implementation of a Quad, a statement made of subject,predicate,object and
  * context (where it came from)
@@ -11,7 +13,7 @@ import main.java.common.interfaces.ITimestamp;
  * @author Bastian
  *
  */
-public class Quad implements IQuint {
+public class Quad implements IQuint, Serializable {
 
 	private IResource subject;
 	private IResource predicate;

@@ -38,4 +38,6 @@ public interface IParsedItemCache<T> {
      */
     void registerSink(IJsonSink jsonSink);
 
+
+    int size();
 }

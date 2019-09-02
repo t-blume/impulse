@@ -5,8 +5,8 @@ import main.java.common.interfaces.IQuint;
 public interface IQuadSink {
 
 
-    boolean addQuint(IQuint quint);
+    int addQuint(IQuint quint);
 
 
-    void finished();
+    int finished();
 }

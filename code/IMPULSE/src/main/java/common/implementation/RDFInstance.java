@@ -4,6 +4,7 @@ import main.java.common.interfaces.IInstanceElement;
 import main.java.common.interfaces.IQuint;
 import main.java.common.interfaces.IResource;
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -13,7 +14,7 @@ import java.util.Set;
  * @author Bastian
  *
  */
-public class RDFInstance implements IInstanceElement {
+public class RDFInstance implements IInstanceElement, Serializable {
 
 	private Set<IQuint> outgoingQuints;
 	private Set<IQuint> incomingQuints;

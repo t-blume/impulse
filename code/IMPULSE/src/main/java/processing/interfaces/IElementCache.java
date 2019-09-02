@@ -50,7 +50,7 @@ public interface IElementCache<T extends ILocatable> {
 	 */
 	T get(IResource res);
 
-	 List<String> get2();
+	 //List<String> get2();
 
 	/**
 	 * Returns the number of elements contained inside of the cache

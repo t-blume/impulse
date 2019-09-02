@@ -57,19 +57,27 @@ public class RDF4QuadSink implements IQuadSink {
     }
 
     @Override
-    public boolean addQuint(IQuint quint) {
+    public int addQuint(IQuint quint) {
         return addStream(quint.getSubject().toN3(), quint.getPredicate().toN3(), quint.getObject().toN3(), quint.getContext().toN3());
 
     }
 
     @Override
-    public void finished() {
+    public int finished() {
         logger.info("Closing connection...");
-        conn.close();
+        logger.info("Uploading remaining stuff: " + stmts.size());
+        if(addStmtToConnection(stmts)) {
+            conn.close();
+            return stmts.size();
+        }
+        else {
+            conn.close();
+            return -stmts.size();
+        }
     }
 
 
-    private boolean addStream(String subject, String predicate, String object, String context) {
+    private int addStream(String subject, String predicate, String object, String context) {
 //        ValueFactory factory = SimpleValueFactory.getInstance();
         ValidatingValueFactory factory = new ValidatingValueFactory();
         Statement stmt = null;
@@ -118,19 +126,17 @@ public class RDF4QuadSink implements IQuadSink {
 
 
         stmts.add(stmt);
-        Boolean answer = false;
-        if (stmts.size() == 100000) {
-            answer = addStmtToConnection(stmts);
-            stmts = new ArrayList<>();
-
+        int bulkSize = 100000;
+        if (stmts.size() >= bulkSize) {
+            if(addStmtToConnection(stmts)){
+                stmts = new ArrayList<>();
+                return bulkSize;
+            }else {
+                stmts = new ArrayList<>();
+                return -bulkSize;
+            }
         }
-
-        return answer;
-    }
-
-    public static void upload(){
-
-        addStmtToConnection(stmts);
+        return 0;
     }
 
 

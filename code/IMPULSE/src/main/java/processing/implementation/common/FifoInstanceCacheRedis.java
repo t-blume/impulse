@@ -6,8 +6,15 @@ import main.java.processing.interfaces.IElementCache;
 import main.java.processing.interfaces.IElementCacheListener;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.redisson.Redisson;
+import org.redisson.api.RBucket;
+import org.redisson.api.RMap;
+import org.redisson.api.RedissonClient;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
 
 /**
  * A first-in-first-out (FIFO) cache implementation for locatable Objects.
@@ -20,13 +27,14 @@ import java.util.*;
  * @param <T> The instanceelements type
  * @author Bastian
  */
-public class FifoInstanceCache<T extends ILocatable> implements
+public class FifoInstanceCacheRedis<T extends ILocatable> implements
         IElementCache<T> {
-    private static final Logger logger = LogManager.getLogger(FifoInstanceCache.class.getSimpleName());
+    private static final Logger logger = LogManager.getLogger(FifoInstanceCacheRedis.class.getSimpleName());
 
     private int deletionCounter = 0;
 
-    private Map<IResource, T> elements;
+    private RedissonClient redisson;
+    private RMap<IResource, T> redissoMap;
     private Queue<IResource> queue;
     private int capacity;
     private List<IElementCacheListener<T>> listeners;
@@ -37,7 +45,7 @@ public class FifoInstanceCache<T extends ILocatable> implements
     /**
      * Constructor. Creates a cache with the highest integer as capacity
      */
-    public FifoInstanceCache() {
+    public FifoInstanceCacheRedis() {
         this(Integer.MAX_VALUE);
     }
 
@@ -46,8 +54,9 @@ public class FifoInstanceCache<T extends ILocatable> implements
      *
      * @param capacity The capacity
      */
-    public FifoInstanceCache(int capacity) {
-        elements = new HashMap<>();
+    public FifoInstanceCacheRedis(int capacity) {
+        redisson = Redisson.create();
+        redissoMap = redisson.getMap("instances");
         listeners = new ArrayList<>();
         queue = new ArrayDeque<>();
         this.capacity = capacity;
@@ -55,26 +64,25 @@ public class FifoInstanceCache<T extends ILocatable> implements
 
     @Override
     public boolean contains(T i) {
-        return elements.containsKey(i.getLocator());
+        boolean contains = redissoMap.containsKey(i.getLocator());
+        System.out.println(contains);
+        return contains;
+       // return redisson.getBucket(i.getLocator().toString()).get() != null;
     }
 
     @Override
     public boolean contains(IResource res) {
-        return elements.containsKey(res);
+        boolean contains = redissoMap.containsKey(res);
+        System.out.println(contains);
+        return contains;
+//        return redisson.getBucket(res.toString()).get() != null;
     }
 
     @Override
     public T get(IResource res) {
-        return elements.get(res);
+        return redissoMap.get(res);
+       // return (T) redisson.getBucket(res.toString()).get();
     }
-
-//    public List<String> get2() {
-//        List<String> list = new ArrayList<>();
-//        for (Map.Entry<IResource, T> entry : elements.entrySet()) {
-//            list.add(entry.getKey() + "/" + entry.getValue());
-//        }
-//        return list;
-//    }
 
     @Override
     public int size() {
@@ -99,46 +107,26 @@ public class FifoInstanceCache<T extends ILocatable> implements
                 }
                 removeLast();
             }
-
-            elements.put(i.getLocator(), i);
+            redissoMap.put(i.getLocator(), i);
             queue.add(i.getLocator());
         }
-
     }
 
     private void removeLast() {
         IResource first = queue.poll();
         T el = get(first);
-        if (capacity != Integer.MAX_VALUE) { //do not remove flushed instance when constructing gold standard
-            elements.remove(first);
-            deletionCounter++;
-        }
         int currentSize = size();
         maxSize = Math.max(maxSize, currentSize);
         if (capacity == Integer.MAX_VALUE && maxSize % 1000 == 0)
             System.out.format("\t\t\t\t\t\t\t\t\t\t\t\t\t\tIC: %08d / %08d\r", currentSize, maxSize);
 
-        if (10 * capacity > 0 && deletionCounter > 10 * capacity) { //integer overflow
-            long start = System.currentTimeMillis();
-            Date date = new Date();
-            System.out.format("%tc: Cleaning cache....\n", date);
-            Map<IResource, T> newElements = new HashMap<>();
-            for (Map.Entry<IResource, T> entry : elements.entrySet())
-                newElements.put(entry.getKey(), entry.getValue());
-
-            elements = newElements;
-            date = new Date();
-            System.out.format("%tc: ... done cleaning in %08d ms\n", date, System.currentTimeMillis() - start);
-            deletionCounter = 0;
-        }
-
         notifyListeners(el);
     }
 
     private void notifyListeners(T el) {
-        for (IElementCacheListener<T> l : listeners) {
+        for (IElementCacheListener<T> l : listeners)
             l.elementFlushed(el);
-        }
+
     }
 
     @Override
@@ -147,10 +135,9 @@ public class FifoInstanceCache<T extends ILocatable> implements
             System.out.format("Items Left: %08d    \r", size());
             removeLast();
         }
-        if(deleteAfterwards){
-            elements = new HashMap<>();
+        if (deleteAfterwards)
             queue = new ArrayDeque<>();
-        }
+
     }
 
     @Override

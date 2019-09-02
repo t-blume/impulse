@@ -47,14 +47,10 @@ public class BasicQuintPipeline implements IQuintPipeline, IQuintSourceListener 
         for (IQuintProcessor p : processors) {
             while (!temp.isEmpty()) {
                 IQuint q = temp.poll();
-
                 List<IQuint> list = p.processQuint(q);
-
                 //System.out.println(list);
                 //current.add(q);
                 current.addAll(list);
-
-
             }
             Queue<IQuint> swap = temp;
             temp = current;

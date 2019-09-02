@@ -14,7 +14,7 @@ import main.java.output.interfaces.IQuadSink;
 import main.java.processing.implementation.Harvester;
 import main.java.processing.implementation.LODatioQuery;
 import main.java.processing.implementation.common.DataItemCache;
-import main.java.processing.implementation.common.FifoInstanceCache;
+import main.java.processing.implementation.common.LRUFiFoInstanceCache;
 import main.java.processing.implementation.parsing.MOVINGParser;
 import main.java.processing.implementation.preprocessing.*;
 import main.java.processing.interfaces.IElementCache;
@@ -22,6 +22,7 @@ import org.apache.commons.cli.*;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.rdf4j.query.algebra.In;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import java.io.*;
@@ -35,13 +36,21 @@ import static main.java.utils.MainUtils.*;
 public class Main {
     private static final Logger logger = LogManager.getLogger(Main.class.getSimpleName());
 
+    private static final int LIMIT = 100000;
 
     public enum RDFRepository {
         RDF4J
     }
 
     public static void main(String[] args) {
-
+        //mute System errors from NxParser for normal procedure
+        if (!logger.getLevel().isLessSpecificThan(Level.TRACE)) {
+            try {
+                System.setErr(new PrintStream(new FileOutputStream("system-errors.txt")));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
 
         logger.debug(Arrays.toString(args));
         // JUL to slf4j logging bridge needed for nxparser logging
@@ -80,8 +89,9 @@ public class Main {
         inputDirectoryFilter.setArgName("inputFilter");
         options.addOption(inputDirectoryFilter);
         ///////////////////////////////////////////////////////////////////////
-
-
+        Option memoryCacheSize = new Option("c", "cachesize", true, "instances stored in main memory");
+        memoryCacheSize.setArgName("int");
+        options.addOption(memoryCacheSize);
         ///////////////////////////////////////////////////////////////////
         // read mapping and query
         Option mapping = new Option("m", "mapping", true, "location of mapping file");
@@ -191,6 +201,7 @@ public class Main {
         boolean usePLDFilter = false;
         boolean downloadCacheMiss = false;
 
+        int cacheSize = Integer.MAX_VALUE;
         //repository input
         RDFRepository rdfRepository = null;
         String repositoryURL = null;
@@ -201,13 +212,10 @@ public class Main {
         IQuadSink quadSink = null;
 
 
-        //mute System errors from NxParser for normal procedure
-//        if (!logger.getLevel().isLessSpecificThan(Level.TRACE))
-//            System.setErr(new PrintStream(new OutputStream() {
-//                @Override
-//                public void write(int b) {
-//                }
-//            }));
+
+        if(cmd.hasOption("c"))
+            cacheSize = Integer.parseInt(cmd.getOptionValue("c"));
+
 
         //get input files
         if (cmd.hasOption("f")) {
@@ -230,7 +238,7 @@ public class Main {
         if (cmd.hasOption("l")) {
             //load and fill respository
             if (repositoryURL == null || repositoryID == null) {
-                logger.error("No valid repository  found!");
+                logger.error("No valid repository found!");
                 System.exit(-1);
             }
             loadOnly = true;
@@ -334,17 +342,15 @@ public class Main {
             preprocessingPipelineContext.addProcessor(new ContextFilter(datasourceURIs));
 
 
-        if(loadOnly && usePLDFilter)
+        if (loadOnly && usePLDFilter)
             preprocessingPipelinePLD.addProcessor(new PLDFilter(datasourceURIs));
 
 
-        if(!loadOnly)
+        if (!loadOnly)
             preprocessingPipelineContext.addProcessor(new ContextFilter(datasourceURIs));
 
-        if(!loadOnly&&usePLDFilter)
+        if (!loadOnly && usePLDFilter)
             preprocessingPipelinePLD.addProcessor(new PLDFilter(datasourceURIs));
-
-
 
 
 //        if (usePLDFilter)
@@ -358,7 +364,6 @@ public class Main {
             quintSource.registerQuintListener(preprocessingPipelinePLD);
 
 
-        logger.debug("AASDA");
         /*
         two basic modes
          */
@@ -374,10 +379,11 @@ public class Main {
 
                 @Override
                 public void finishedQuint(IQuint i) {
-                    if (finalQuadSink.addQuint(i))
-                        success++;
-                    else
-                        failed++;
+                    int tmp = finalQuadSink.addQuint(i);
+                    if (tmp > 0)
+                        success += tmp;
+                    else if (tmp < 0)
+                        failed += -tmp;
                 }
 
                 @Override
@@ -387,8 +393,12 @@ public class Main {
 
                 @Override
                 public void finished() {
-                    RDF4QuadSink.upload();
-                    finalQuadSink.finished();
+                    int tmp = finalQuadSink.finished();
+                    if (tmp > 0)
+                        success += tmp;
+                    else if (tmp < 0)
+                        failed += -tmp;
+
                     logger.info("Added " + success + " to repository, " + failed + " failed!");
                 }
             });
@@ -401,14 +411,14 @@ public class Main {
 
             ////////////////////// <--------- use repository if applicable
             //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
-            IElementCache<IInstanceElement> rdfInstanceCacheContext = new FifoInstanceCache<>();
+            IElementCache<IInstanceElement> rdfInstanceCacheContext = new LRUFiFoInstanceCache<>(cacheSize);
             InstanceAggregator instanceAggregatorContext = new InstanceAggregator(rdfInstanceCacheContext);
             preprocessingPipelineContext.registerQuintListener(instanceAggregatorContext);
 
             IElementCache<IInstanceElement> rdfInstanceCachePLD = null;
             if (usePLDFilter) {
                 //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
-                rdfInstanceCachePLD = new FifoInstanceCache<>();
+                rdfInstanceCachePLD = new LRUFiFoInstanceCache<>(cacheSize);
                 InstanceAggregator instanceAggregatorPLD = new InstanceAggregator(rdfInstanceCachePLD);
                 preprocessingPipelinePLD.registerQuintListener(instanceAggregatorPLD);
             }
@@ -437,16 +447,18 @@ public class Main {
             } else if (elasticIndex != null) {
                 jsonCacheContext.registerSink(new Elastify(elasticIndex, elasticType));
                 if (usePLDFilter) {
+                    jsonCacheContext.registerSink(new Elastify("pld-" + elasticIndex, elasticType));
+
                     logger.error("PLD and ELasticsearch not yet supported!");
                     System.exit(-1);
                 }
             } else
                 logger.error("Misconfiguration export!");
             //combine parser and json cache
-            Harvester harvesterContext = new Harvester(parserContext, jsonCacheContext);
+            Harvester harvesterContext = new Harvester(parserContext, jsonCacheContext, LIMIT);
             Harvester harvesterPLD = null;
             if (usePLDFilter)
-                harvesterPLD = new Harvester(parserPLD, jsonCachePLD);
+                harvesterPLD = new Harvester(parserPLD, jsonCachePLD, LIMIT);
 
             //listen to RDF instances
             rdfInstanceCacheContext.registerCacheListener(harvesterContext);
@@ -467,10 +479,11 @@ public class Main {
                     parserContext.getMissingVenue() + " Missing Venue! " +
                     (parserContext.getMissingVenue() + parserContext.getMissingPerson() + parserContext.getMissingConcept()) + " total Cachemisses!");
 
-            logger.info(parserPLD.getMissingConcept() + " Missing Concepts " +
-                    parserPLD.getMissingPerson() + " Missing Persons " +
-                    parserPLD.getMissingVenue() + " Missing Venue! " +
-                    (parserPLD.getMissingVenue() + parserPLD.getMissingPerson() + parserPLD.getMissingConcept()) + " total Cachemisses!");
+            if (usePLDFilter)
+                logger.info(parserPLD.getMissingConcept() + " Missing Concepts " +
+                        parserPLD.getMissingPerson() + " Missing Persons " +
+                        parserPLD.getMissingVenue() + " Missing Venue! " +
+                        (parserPLD.getMissingVenue() + parserPLD.getMissingPerson() + parserPLD.getMissingConcept()) + " total Cachemisses!");
 
 
             File fileContext = new File(outputDir + File.separator +
@@ -487,20 +500,21 @@ public class Main {
                 e1.printStackTrace();
             }
 
-            File filePLD = new File(outputDir + File.separator +
-                    "pld-" + p + "_cachemiss.txt");
+            if (usePLDFilter) {
+                File filePLD = new File(outputDir + File.separator +
+                        "pld-" + p + "_cachemiss.txt");
 
-            try (FileWriter writer = new FileWriter(filePLD, false)) {
-                PrintWriter pw = new PrintWriter(writer);
-                pw.println(parserPLD.getMissingConcept() + " Missing Concepts " +
-                        parserPLD.getMissingPerson() + " Missing Persons " +
-                        parserPLD.getMissingVenue() + " Missing Venue! " +
-                        (parserPLD.getMissingVenue() + parserPLD.getMissingPerson() + parserPLD.getMissingConcept()) + " total Cachemisses!");
+                try (FileWriter writer = new FileWriter(filePLD, false)) {
+                    PrintWriter pw = new PrintWriter(writer);
+                    pw.println(parserPLD.getMissingConcept() + " Missing Concepts " +
+                            parserPLD.getMissingPerson() + " Missing Persons " +
+                            parserPLD.getMissingVenue() + " Missing Venue! " +
+                            (parserPLD.getMissingVenue() + parserPLD.getMissingPerson() + parserPLD.getMissingConcept()) + " total Cachemisses!");
 
-            } catch (IOException e1) {
-                e1.printStackTrace();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
             }
-
 
             if (downloadCacheMiss) {
                 File file = new File(outputDir + File.separator +

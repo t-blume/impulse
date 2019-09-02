@@ -27,7 +27,6 @@ public class DataItemCache implements IParsedItemCache<DataItem> {
 
     @Override
     public void add(DataItem item) {
-
         if (item.getMetadataPersons() != null)
             set.add(item);
     }
@@ -62,5 +61,10 @@ public class DataItemCache implements IParsedItemCache<DataItem> {
     @Override
     public void registerSink(IJsonSink jsonSink) {
         sinks.add(jsonSink);
+    }
+
+    @Override
+    public int size() {
+        return set.size();
     }
 }

@@ -21,13 +21,15 @@ public class Harvester implements IElementCacheListener<IInstanceElement> {
     //temporary in-memory storage for parsed JSON instances
     private DataItemCache jsonCache;
 
+    private int limit;
 
     int successfull = 0;
     int errornous = 0;
 
-    public Harvester(MOVINGParser parser, DataItemCache jsonCache) {
+    public Harvester(MOVINGParser parser, DataItemCache jsonCache, int limit) {
         this.parser = parser;
         this.jsonCache = jsonCache;
+        this.limit = limit;
     }
 
 
@@ -37,20 +39,20 @@ public class Harvester implements IElementCacheListener<IInstanceElement> {
 //        System.out.println(instance.getOutgoingQuints());
         DataItem dataItem = parser.convertInstance2JSON(instance);
 
-            if (dataItem != null && dataItem.getMetadataPersons()!=null) {
-                jsonCache.add(dataItem);
-//                jsonCache.flush();
-                successfull++;
-            } else
-                errornous++;
+        if (dataItem != null && dataItem.getMetadataPersons() != null) {
+            jsonCache.add(dataItem);
+            if(jsonCache.size() > limit) {
+                logger.info("Flushing intermediate chunk of " + jsonCache.size() + " items to sinks!");
+                jsonCache.flush();
+            }
+            successfull++;
+        } else
+            errornous++;
 
     }
 
     @Override
     public void finished() {
-
-        //parser.newData.forEach(x-> System.out.println(x));
-
         logger.info("Harvesting of " + successfull + "/" + (successfull + errornous) + " finished successfully, flushing to sinks...");
         jsonCache.flush();
     }

@@ -2,6 +2,8 @@ package main.java.common.implementation;
 
 import main.java.common.interfaces.IResource;
 
+import java.io.Serializable;
+
 /**
  * A wrapper resource, which enriches a given resource with a type. For example
  * to distinguish different contexts for the same identifier
@@ -9,7 +11,7 @@ import main.java.common.interfaces.IResource;
  * @author Bastian
  *
  */
-public class TypedResource implements IResource {
+public class TypedResource implements IResource, Serializable {
 
 	private String type;
 

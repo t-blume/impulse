@@ -32,40 +32,31 @@ public class JSONUpload {
 
 
         BulkRequestBuilder bulkRequest = client.prepareBulk();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(path));
+            String line;
+            while ((line = br.readLine()) != null) {
+                // System.out.println(line);
+                JSONParser parser = new JSONParser();
+                try {
 
+                    Object obj = parser.parse(line);
 
+                    JSONObject jsonObject = (JSONObject) obj;
+                    // System.out.println(jsonObject);
 
-            try {
+                    bulkRequest.add(client.prepareIndex(INDEX, TYPE)
+                            .setSource(jsonObject));
 
-                BufferedReader br = new BufferedReader(new FileReader(path));
-
-                String line;
-                while ((line = br.readLine()) != null) {
-                    // System.out.println(line);
-
-                    JSONParser parser = new JSONParser();
-
-                    try {
-
-                        Object obj = parser.parse(line);
-
-                        JSONObject jsonObject = (JSONObject) obj;
-                        // System.out.println(jsonObject);
-
-                        bulkRequest.add(client.prepareIndex(INDEX, TYPE)
-                                .setSource(jsonObject));
-
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                    }
-
-
+                } catch (ParseException e) {
+                    e.printStackTrace();
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
+
+
             }
-
-
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         if ((bulkRequest != null) && (!bulkRequest.request().requests().isEmpty())) {
             BulkResponse bulkResponse = bulkRequest.execute().actionGet();
@@ -76,7 +67,5 @@ public class JSONUpload {
                         bulkResponse.getItems().length + " documents");
             }
         }
-
-
     }
 }

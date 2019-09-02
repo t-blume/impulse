@@ -10,7 +10,7 @@ package main.java.common.interfaces;
  * @author Bastian
  * 
  */
-public interface IQuint {
+public interface IQuint{
 
 	/**
 	 * The subject of the RDF-statement in N-Quad notation will be returned

@@ -86,10 +86,19 @@ public class RDF4JQuadSource implements IQuintSource {
             }
         }
         //start iterating through the whole repository
+        int interval = 50;
         if (subjectURIs != null) {
+            long start = System.currentTimeMillis();
+            double estimatedTime = 0.0;
             for (String subjectURI : subjectURIs) {
-//                if (counterInstances % 1000 == 0)
-                logger.debug("Instance " + counterInstances + " / " + subjectURIs.size() + "!");
+                if (counterInstances % interval == 0) {
+                    long now = System.currentTimeMillis();
+                    double speed = (double)interval/(double)(now - start);
+                   estimatedTime = ((double)(subjectURIs.size() - counterInstances)) / (speed * 1000);
+                    logger.debug("Instance " + counterInstances + " / " + subjectURIs.size() +
+                            " (speed: " + String.format("%1$.3f", speed*1000) + " I/s), Estimated time left: " + String.format("%1$.3f",estimatedTime) + " s");
+                    start = now;
+                }
 
                 //retrieves all quads (recursively) related to the subject URI and sends
                 //them to the listener
@@ -104,10 +113,7 @@ public class RDF4JQuadSource implements IQuintSource {
                 //signal that now all relevant information is in the instance cache
                 for (IQuintSourceListener l : listeners)
                     l.microBatch();
-
-
             }
-
 
             try {
                 close();
