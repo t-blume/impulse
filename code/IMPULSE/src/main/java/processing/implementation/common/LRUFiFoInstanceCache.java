@@ -112,7 +112,9 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
         // if memory is full -> move eldest entry to disk
         if (memoryCachedElements.size() >= capacity) {
             T eldestElement = memoryCachedElements.getEldestEntry().getValue();
-            logger.debug("Dumping instance to disk, memory cache size:  " + memoryCachedElements.size() + ", total: " + size());
+            if (size() % 1000 == 0)
+                System.out.format("Instances parsed: %08d    \r", size());
+
             saveToDisk(eldestElement);
             memoryCachedElements.remove(eldestElement.getLocator());
         }
@@ -160,7 +162,8 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
     @Override
     public void flush(boolean deleteAfterwards) {
         while (size() != 0) {
-            System.out.format("Items Left: %08d    \r", size());
+            if (size() % 1000 == 0)
+                System.out.format("Items flushed: %08d    \r", size());
             removeLast();
         }
         if (deleteAfterwards) {
@@ -184,7 +187,8 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
     @Override
     public void close() {
-        logger.info("Closing Instance Cache, flushing to listeners...");
+        logger.info("Closing Instance Cache, flushing "+size()+" instances to listeners.");
+
         flush(true);
         for (IElementCacheListener<T> l : listeners)
             l.finished();
