@@ -30,7 +30,7 @@ import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 
 
 public class Main {
-    private static int counter = 0;
+
     private static final String INDEX = "kummuliert_pld_inf";
     private static final String TYPE = "publication";
 

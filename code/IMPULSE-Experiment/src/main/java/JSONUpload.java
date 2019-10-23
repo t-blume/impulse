@@ -18,7 +18,6 @@ public class JSONUpload {
     private String TYPE;
 
     public JSONUpload(String index, String type) {
-
         this.INDEX = index;
         this.TYPE = type;
     }

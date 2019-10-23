@@ -46,7 +46,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
     }
 
     public LRUFiFoInstanceCache(int capacity) {
-        this(capacity, "tmp");
+        this(capacity, "disk-cache");
     }
 
     /**
@@ -87,7 +87,6 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
             else {
                 T element = getFromDisk(res);
                 //add to cache
-                //TODO
                 memoryCachedElements.put(element.getLocator(), element);
                 return element;
             }
@@ -187,9 +186,9 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
     @Override
     public void close() {
-        logger.info("Closing Instance Cache, flushing "+size()+" instances to listeners.");
-
-        flush(true);
+        logger.info("Closing Instance Cache, flushing " + size() + " instances to listeners.");
+        //FIXME deleting more than MAX_INT files probably causes program to crash
+        flush(false);
         for (IElementCacheListener<T> l : listeners)
             l.finished();
     }
@@ -206,6 +205,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
             try {
                 ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
                 res = (T) ois.readObject();
+                ois.close();
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (ClassNotFoundException e) {
@@ -220,6 +220,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
         try {
             ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file));
             oos.writeObject(element);
+            oos.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

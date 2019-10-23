@@ -30,7 +30,7 @@ import java.util.zip.ZipInputStream;
  */
 public class FileQuadSource implements IQuintSource {
     private static final Logger logger = LogManager.getLogger(FileQuadSource.class.getSimpleName());
-    private int counter = 0;
+    private long counter = 0;
 
     private List<IQuintSourceListener> listeners;
     private List<Path> filePaths;

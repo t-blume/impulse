@@ -20,11 +20,10 @@ public class Deduplication {
     private String INDEX;
     private String TYPE;
     private Boolean fuzzy;
-    //   private static HashMap<String, Object> dedup = new HashMap<String, Object>();
-    private static HashMap<String, Object> dedup = new HashMap<String, Object>();
-    private static List<String> docs2Delete = new ArrayList<String>();
-    private static List<String> docs2Update = new ArrayList<String>();
-    private int counter = 0;
+
+    private static HashMap<String, Object> dedup = new HashMap<>();
+    private static List<String> docs2Delete = new ArrayList<>();
+    private static List<String> docs2Update = new ArrayList<>();
 
 
     public Deduplication(String index, String type, Boolean fuzzy) {
@@ -49,46 +48,57 @@ public class Deduplication {
                 .get();
 
 
+        /*
+          "size": 0,
+  "aggs": {
+    "duplicateCount": {
+      "terms": {
+      "field": "name",
+        "min_doc_count": 2
+      },
+      "aggs": {
+        "duplicateDocuments": {
+          "top_hits": {}
+        }
+      }
+    }
+  }
+}'
+         */
+
         int counter = 0;
-        // Map<String, Object> distinctObjects = new HashMap<String, Object>();
-        Map<String, Object> docFromIndex = new HashMap<String, Object>();
+        Map<String, Object> docFromIndex;
         do {
             for (SearchHit hit : scrollResponse.getHits().getHits()) {
                 counter++;
-//if (counter >=2000000) {
-    docFromIndex = hit.getSourceAsMap();
+                docFromIndex = hit.getSourceAsMap();
+                docFromIndex.put("doc_id", hit.getId());
+                if (docFromIndex.get("title") != null && docFromIndex.get("metadata_persons") != null) {
+                    String s = docFromIndex.get("title").toString();
+                    if (fuzzy) {
+                        if (fuzzyMatchingMap(s)) {
+                            doDeduplication(docFromIndex, s, hit);
+                        } else {
+                            dedup.put(s, docFromIndex);
+                        }
+                    } else {
+                        if (dedup.containsKey(s)) {
+                            //  System.out.println("Exact matching: duplicate doc: " + s);
+                            doDeduplication(docFromIndex, s, hit);
+                        } else {
+                            dedup.put(s, docFromIndex);
+                        }
+                    }
 
-    docFromIndex.put("doc_id", hit.getId());
-
-
-    if (docFromIndex.get("title") != null && docFromIndex.get("metadata_persons") != null) {
-        String s = docFromIndex.get("title").toString();
-
-        if (fuzzy) {
-            if (fuzzyMatchingMap(s)) {
-                //  System.out.println("Fuzzy matching: duplicate doc: " + s);
-                doDeduplication(docFromIndex, s, hit);
-            } else {
-                dedup.put(s, docFromIndex);
+                } else {
+                    counter++;
+                    docs2Delete.add(hit.getId());
+                }
             }
-        } else {
-            if (dedup.containsKey(s)) {
-                //  System.out.println("Exact matching: duplicate doc: " + s);
-                doDeduplication(docFromIndex, s, hit);
-            } else {
-                dedup.put(s, docFromIndex);
-            }
-        }
-
-    } else {
-        counter++;
-        docs2Delete.add(hit.getId());
-    }
-}
 //            }
             scrollResponse = client.prepareSearchScroll(scrollResponse.getScrollId()).setScroll(new TimeValue(60000)).execute().actionGet();
         }
-        while (scrollResponse.getHits().getHits().length != 0&& counter <=5000000); // Zero hits mark the end of the scroll and the while loop.
+        while (scrollResponse.getHits().getHits().length != 0 && counter <= 5000000); // Zero hits mark the end of the scroll and the while loop.
 //        while (scrollResponse.getHits().getHits().length != 0); // Zero hits mark the end of the scroll and the while loop.
 
 
@@ -96,12 +106,6 @@ public class Deduplication {
 
 
         updateIndex();
-//        System.out.println("Dedups: " + dedup);
-//        System.out.println("Zu Löschen: " + docs2Delete);
-
-
-        //   System.out.println("Abstracts with more than 293 letters: " + counter);
-
 
         client.close();
     }
@@ -233,8 +237,7 @@ public class Deduplication {
             docAlreadyInMap.put("abstract", attribute2Add);
 
 
-        }
-        else if (s.equals("concept")) {
+        } else if (s.equals("concept")) {
             List conceptsDocAlreadyInMap = (List) docAlreadyInMap.get("concepts");
             //  System.out.println("... merging " + s + ": " + attribute2Add +" in Document with Title: " + docAlreadyInMap.get("title"));
             conceptsDocAlreadyInMap.add(attribute2Add);
@@ -282,7 +285,7 @@ public class Deduplication {
 //
         BulkRequestBuilder bulkRequest = client.prepareBulk();
         Iterator<String> iter2Delete = docs2Delete.iterator();
-            counter=0;
+        counter = 0;
         while (iter2Delete.hasNext()) {
             counter++;
 
@@ -299,7 +302,6 @@ public class Deduplication {
     }
 
     private void executeBulk(BulkRequestBuilder bulkRequest2) {
-
 
 
         if ((bulkRequest2 != null) && (!bulkRequest2.request().requests().isEmpty())) {
