@@ -1,27 +1,20 @@
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.TransportAddress;
-import org.elasticsearch.common.unit.TimeValue;
+import org.apache.logging.log4j.util.SortedArrayStringMap;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.sort.FieldSortBuilder;
-import org.elasticsearch.search.sort.SortOrder;
-import org.elasticsearch.transport.client.PreBuiltTransportClient;
+import org.elasticsearch.search.SearchHits;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.*;
 
 /**
  * Get Information about a single generated dataset.
  */
 public class DatasetStatistics {
-    private String INDEX;
-    private String TYPE;
+
+    private static final int TOP_K_PLDs = 10;
+
+    private ElasticsearchClient client;
 
     private int counterAbstract = 0;
     private int counterDoc = 0;
@@ -32,29 +25,19 @@ public class DatasetStatistics {
     private List<Integer> avgConcept = new ArrayList<>();
     private List<Integer> avgKeyword = new ArrayList<>();
 
+    private Set<String> contextURIs = new HashSet<>();
+    private Map<String, Integer> documentCountPerPayLevelDomain = new HashMap<>();
 
-    public DatasetStatistics(String index, String type) {
-        this.INDEX = index;
-        this.TYPE = type;
+    public DatasetStatistics(ElasticsearchClient client) {
+        this.client = client;
     }
 
-    public void analyze() throws UnknownHostException {
-        Client client = new PreBuiltTransportClient(
-                Settings.builder().put("client.transport.sniff", true)
-                        .put("cluster.name", "elasticsearch").build())
-                .addTransportAddress(new TransportAddress(InetAddress.getByName("127.0.0.1"), 9300));
-
-
+    public void runStatistics() throws IOException {
         //scroll through the whole index
-        SearchResponse scrollResponse = client.prepareSearch(INDEX).setTypes(TYPE)
-                .addSort(FieldSortBuilder.DOC_FIELD_NAME, SortOrder.ASC)
-                .setScroll(new TimeValue(60000))
-                .setQuery(matchAllQuery())
-                .setSize(100)
-                .get();
+        SearchHits hits = client.search(null, 100);
 
-        while (scrollResponse.getHits().getHits().length != 0) {
-            for (SearchHit hit : scrollResponse.getHits().getHits()) {
+        while (hits.getHits().length != 0) {
+            for (SearchHit hit : hits.getHits()) {
                 Map<String, Object> source = hit.getSourceAsMap();
 
                 boolean hasAbstract = false;
@@ -88,15 +71,30 @@ public class DatasetStatistics {
                 if (hasAbstract && hasConcepts && hasKeywords)
                     counterKeywordsConceptsAbstract++;
 
-                //get next set of items
-                scrollResponse = client.prepareSearchScroll(scrollResponse.getScrollId()).setScroll(new TimeValue(60000)).execute().actionGet();
+
+                if (source.get("sourceURLs") != null) {
+                    List<String> sourceURIs = (List) source.get("sourceURLs");
+                    Set<String> payLevelDomains = new HashSet<>();
+                    for (String sourceURI : sourceURIs) {
+                        contextURIs.add(sourceURI);
+                        try {
+                            payLevelDomains.add(extractPLD(sourceURI));
+                        } catch (URISyntaxException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    for (String pld : payLevelDomains)
+                        documentCountPerPayLevelDomain.merge(pld, 1, (O,N) -> O + N);
+                }
             }
+            //get next set of items
+            hits = client.scroll();
         }
-        client.close();
         System.out.println("_______________________________________");
-        System.out.println(INDEX);
+        System.out.println(client.getIndex());
         System.out.println("Total Docs: " + counterDoc);
-        System.out.println("Docs with Abstracts" + counterAbstract);
+        System.out.println("Docs with Abstracts: " + counterAbstract);
         System.out.println("Docs with Concepts: " + counterConcepts);
         System.out.println("Docs with Keywords: " + counterKeywords);
         System.out.println("Docs complete: " + counterKeywordsConceptsAbstract);
@@ -121,18 +119,32 @@ public class DatasetStatistics {
 
         if (avgConcept.size() != 0)
             System.out.println("Avg. Concepts/Doc: " + (avgConcepts / avgConcept.size()) + " (" + standardDeviationConcepts + ")");
-         else
+        else
             System.out.println("Avg. Concepts/Doc: 0 (0)");
 
 
         if (avgKeyword.size() != 0)
-            System.out.println("Avg. Keywords/Doc: " + (avgKeywords / avgKeyword.size())+ " (" + standardDeviationKeywords + ")");
-         else
+            System.out.println("Avg. Keywords/Doc: " + (avgKeywords / avgKeyword.size()) + " (" + standardDeviationKeywords + ")");
+        else
             System.out.println("Avg. Keywords/Doc: 0 (0)");
 
         System.out.println("_______________________________________");
+        System.out.println("Number of PLDs: " + documentCountPerPayLevelDomain.keySet().size());
+
+
+        Map<String, Integer> sortedPLDs = Utils.sortByValue(documentCountPerPayLevelDomain);
+        int c = 0;
+        Iterator<Map.Entry<String, Integer>> iterator = sortedPLDs.entrySet().iterator();
+        while (c < TOP_K_PLDs && iterator.hasNext()){
+            Map.Entry<String, Integer> pld = iterator.next();
+            System.out.println(pld.getKey() + ": " + pld.getValue() + " (" + Math.round((double) pld.getValue()/ (double) counterDoc * 100) + "%)");
+            c++;
+        }
     }
 
+
+    //----------------------------------------------------//
+    // ----- HELPER
 
     public static double calculateSD(List<Integer> numArray) {
         double sum = 0.0, standardDeviation = 0.0;
@@ -148,5 +160,25 @@ public class DatasetStatistics {
             standardDeviation += Math.pow(num - mean, 2);
 
         return Math.sqrt(standardDeviation / length);
+    }
+
+
+    /**
+     * proper way to extract PLD
+     * @param uri
+     * @return
+     * @throws URISyntaxException
+     */
+    public static String extractPLD(String uri) throws URISyntaxException {
+        if (uri == null)
+            return null;
+        if(uri.trim().isEmpty())
+            return "";
+
+        URI parsedUri = new URI(uri);
+
+        String pld = parsedUri.getHost();
+
+        return pld;
     }
 }

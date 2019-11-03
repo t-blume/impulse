@@ -2,7 +2,6 @@ import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
-import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -115,10 +114,10 @@ public class CutCutAnalysis {
 
 
     public void analyse() throws UnknownHostException {
-        Client client = new PreBuiltTransportClient(
-                Settings.builder().put("client.transport.sniff", true)
-                        .put("cluster.name", "elasticsearch").build())
-                .addTransportAddress(new TransportAddress(InetAddress.getByName("127.0.0.1"), 9300));
+//        Client client = new PreBuiltTransportClient(
+//                Settings.builder().put("client.transport.sniff", true)
+//                        .put("cluster.name", "elasticsearch").build())
+//                .addTransportAddress(new TransportAddress(InetAddress.getByName("127.0.0.1"), 9300));
 
         Iterator<String> iter = id_first.iterator();
         Iterator<String> iter2 = id_second.iterator();
@@ -127,16 +126,16 @@ public class CutCutAnalysis {
         doc2Analyse2.forEach(x -> {
             Map<String, Object> source = new HashMap<String, Object>();
 
-            GetResponse response = client.prepareGet("kummuliert_context", TYPE, x).get();
+//            GetResponse response = client.prepareGet("kummuliert_context", TYPE, x).get();
+//
+//
+//            source = response.getSourceAsMap();
+//
+//            String title = (String) source.get("title");
+//            String ID_first = (String) response.getId();
 
 
-            source = response.getSourceAsMap();
-
-            String title = (String) source.get("title");
-            String ID_first = (String) response.getId();
-
-
-            cut.put(title, "kummuliert_context");
+//            cut.put(title, "kummuliert_context");
 
 
         });
@@ -148,16 +147,16 @@ public class CutCutAnalysis {
 
             Map<String, Object> source = new HashMap<String, Object>();
 
-            GetResponse response = client.prepareGet("kummuliert_context_type", TYPE, x).get();
+//            GetResponse response = client.prepareGet("kummuliert_context_type", TYPE, x).get();
 
-
-            source = response.getSourceAsMap();
-
-            String title = (String) source.get("title");
-            String ID_first = (String) response.getId();
-
-            if (!cut.containsKey(title))
-                cut.put(title, "kummuliert_context_type");
+//
+//            source = response.getSourceAsMap();
+//
+//            String title = (String) source.get("title");
+//            String ID_first = (String) response.getId();
+//
+//            if (!cut.containsKey(title))
+//                cut.put(title, "kummuliert_context_type");
 
 
         });
