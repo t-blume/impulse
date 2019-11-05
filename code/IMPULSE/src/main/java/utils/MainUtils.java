@@ -151,40 +151,4 @@ public class MainUtils {
         return jsonStrings;
     }
 
-
-//    public static Iterable<URI> prepareSeedsIterable(File seedList) throws IOException {
-//        List<URI> seeds = new LinkedList<URI>();
-//
-//        final Iterator<URI> it;
-//        NxParser nxp = new NxParser();
-//
-//
-//        if (seedList.getPath().endsWith(".nx.gz")) {
-//            InputStream is = new GZIPInputStream(new FileInputStream(seedList));
-//            it = new PleaseCloseTheDoorWhenYouLeaveIterator<URI>(new Node2uriConvertingIterator(nxp.parse(is), 0), is);
-//        } else if (seedList.getPath().endsWith(".gz")) {
-//            BufferedReader br = new BufferedReader(new InputStreamReader(
-//                    new GZIPInputStream(new FileInputStream(seedList))));
-//            it = new PleaseCloseTheDoorWhenYouLeaveIterator<URI>(
-//                    new com.ontologycentral.ldspider.Util.StringToURIiterable(
-//                            new com.ontologycentral.ldspider.Util.LineByLineIterable(br)).iterator(), br);
-//        } else if (seedList.getPath().endsWith(".nx")) {
-//            FileReader fr = new FileReader(seedList);
-//            it = new PleaseCloseTheDoorWhenYouLeaveIterator<URI>(
-//                    new Node2uriConvertingIterator(nxp.parse(fr), 0), fr);
-//        } else {
-//            FileReader fr = new FileReader(seedList);
-//            it = new PleaseCloseTheDoorWhenYouLeaveIterator<URI>(
-//                    new com.ontologycentral.ldspider.Util.StringToURIiterable(new com.ontologycentral.ldspider.Util.LineByLineIterable(
-//                            new BufferedReader(fr))).iterator(), fr);
-//        }
-//
-//        return new Iterable<URI>() {
-//            public Iterator<URI> iterator() {
-//                return it;
-//            }
-//        };
-
-
-
 }

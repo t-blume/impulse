@@ -57,7 +57,7 @@ public interface IElementCache<T extends ILocatable> {
 	 * 
 	 * @return The number of elements
 	 */
-	int size();
+	long size();
 
 	/**
 	 * Add a new instance to the cache. If an entry is already present, it will

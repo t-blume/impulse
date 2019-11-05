@@ -9,21 +9,6 @@ import java.io.PrintStream;
 import java.util.List;
 
 
-/*
-    //Object mapper instance
-    private ObjectMapper mapper = new ObjectMapper();
-
-
-
-    public void print(DataItem dataItem) {
-        if (dataItem != null && dataItem.getTitle() != null && !dataItem.getTitle().isEmpty()) {
-            // System.out.println(dataItem.getMetadataPersons());
-            //Convert POJO to JSON
-            String json = mapper.writeValueAsString(dataItem);
-        }
-    }
- */
-
 /**
  * Created by Blume Till on 07.10.2016.
  */
@@ -36,12 +21,10 @@ public class FileJSONSink implements IJsonSink {
 
     public FileJSONSink(PrintStream pw) {
         this.pw = pw;
-//        pw.print("\n");
     }
 
     @Override
     public boolean close() {
-//        pw.print("\n");
         pw.close();
         logger.info("Exported " + count + " data items!");
         return true;
@@ -49,28 +32,26 @@ public class FileJSONSink implements IJsonSink {
 
     @Override
     public boolean export(String jsonString) {
-        if(jsonString == null || jsonString.isEmpty())
+        if (jsonString == null || jsonString.isEmpty())
             return false;
 
         count++;
         if (count % logger_interval == 0)
-            logger.debug("Printed data item: "+count+"\r");
+            logger.debug("Printed data item: " + count + "\r");
 
-        if (count > 1) //printing an json array
-//            jsonString = jsonString ;
-
-        pw.println(jsonString);
+        if (count > 1)
+            pw.println(jsonString);
         return true;
     }
 
     @Override
     public int bulkExport(List<String> jsonStrings) {
         int successful = 0;
-        if(jsonStrings == null || jsonStrings.isEmpty())
+        if (jsonStrings == null || jsonStrings.isEmpty())
             return successful;
 
 
-        for(String jsonString : jsonStrings)
+        for (String jsonString : jsonStrings)
             successful = export(jsonString) ? successful++ : successful;
 
         return successful;

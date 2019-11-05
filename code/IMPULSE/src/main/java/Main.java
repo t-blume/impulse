@@ -13,7 +13,7 @@ import main.java.output.implementation.RDF4QuadSink;
 import main.java.output.interfaces.IQuadSink;
 import main.java.processing.implementation.Harvester;
 import main.java.processing.implementation.LODatioQuery;
-import main.java.processing.implementation.common.DataItemCache;
+import main.java.processing.implementation.common.DataItemBuffer;
 import main.java.processing.implementation.common.LRUFiFoInstanceCache;
 import main.java.processing.implementation.parsing.MOVINGParser;
 import main.java.processing.implementation.preprocessing.*;
@@ -22,7 +22,6 @@ import org.apache.commons.cli.*;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.eclipse.rdf4j.query.algebra.In;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import java.io.*;
@@ -36,7 +35,6 @@ import static main.java.utils.MainUtils.*;
 public class Main {
     private static final Logger logger = LogManager.getLogger(Main.class.getSimpleName());
 
-    private static final int LIMIT = 100000;
 
     public enum RDFRepository {
         RDF4J
@@ -212,8 +210,7 @@ public class Main {
         IQuadSink quadSink = null;
 
 
-
-        if(cmd.hasOption("c"))
+        if (cmd.hasOption("c"))
             cacheSize = Integer.parseInt(cmd.getOptionValue("c"));
 
 
@@ -403,8 +400,8 @@ public class Main {
                 }
             });
             quintSource.start();
-//            logger.debug("Removed Quints: " + FixBNodes.getRemovedQuints());
-//            logger.debug("Fixed Quints: " + FixBNodes.getFixedLiterals());
+            logger.debug("Removed Quints: " + FixBNodes.getRemovedQuints());
+            logger.debug("Fixed Quints: " + FixBNodes.getFixedLiterals());
             logger.debug("Fixed BlankNodes: " + FixBNodes.getFixedBlankNodes());
         } else {
             logger.debug("Starting in \"process\"-mode....");
@@ -424,18 +421,18 @@ public class Main {
             }
 
             //convert RDF instances to JSON instances
-            MOVINGParser parserContext = new MOVINGParser(rdfInstanceCacheContext, mapping, downloadCacheMiss);
+            MOVINGParser parserContext = new MOVINGParser(rdfInstanceCacheContext, mapping);
             MOVINGParser parserPLD = null;
             if (usePLDFilter) {
                 //convert RDF instances to JSON instances
-                parserPLD = new MOVINGParser(rdfInstanceCachePLD, mapping, downloadCacheMiss);
+                parserPLD = new MOVINGParser(rdfInstanceCachePLD, mapping);
             }
 
             //in-memory cache to store converted JSON instances
-            DataItemCache jsonCacheContext = new DataItemCache();
-            DataItemCache jsonCachePLD = null;
+            DataItemBuffer jsonCacheContext = new DataItemBuffer();
+            DataItemBuffer jsonCachePLD = null;
             if (usePLDFilter)
-                jsonCachePLD = new DataItemCache();
+                jsonCachePLD = new DataItemBuffer();
 
             if (outputDir != null) {
                 jsonCacheContext.registerSink(new FileJSONSink(new PrintStream(
@@ -449,16 +446,16 @@ public class Main {
                 if (usePLDFilter) {
                     jsonCacheContext.registerSink(new Elastify("pld-" + elasticIndex, elasticType));
 
-                    logger.error("PLD and ELasticsearch not yet supported!");
+                    logger.error("PLD and Elasticsearch not yet supported!");
                     System.exit(-1);
                 }
             } else
                 logger.error("Misconfiguration export!");
             //combine parser and json cache
-            Harvester harvesterContext = new Harvester(parserContext, jsonCacheContext, LIMIT);
+            Harvester harvesterContext = new Harvester(parserContext, jsonCacheContext);
             Harvester harvesterPLD = null;
             if (usePLDFilter)
-                harvesterPLD = new Harvester(parserPLD, jsonCachePLD, LIMIT);
+                harvesterPLD = new Harvester(parserPLD, jsonCachePLD);
 
             //listen to RDF instances
             rdfInstanceCacheContext.registerCacheListener(harvesterContext);
@@ -546,8 +543,7 @@ public class Main {
         /*
         start the source to start the pipeline
          */
-
-            logger.info("Harvesting took: " + time + " min");
+        logger.info("Harvesting took: " + time + " min");
         }
 
 

@@ -19,24 +19,6 @@ import static main.java.utils.WebIO.getContent;
  */
 public class LODatioQuery {
 
-    public static final int LIMIT = 999999;
-
-    private static final String biboQuery = "PREFIX bibo: <http://purl.org/ontology/bibo/> PREFIX dcterms: <http://purl.org/dc/terms/> SELECT ?x WHERE {\t?x dcterms:title ?a.   \t?x bibo:authorList  ?b }";
-
-    private static final String dboQuery = "PREFIX dbo: <http://dbpedia.org/ontology/> SELECT ?x WHERE {\t?x dbo:title ?a.   \t?x dbo:author ?b}";
-
-    private static final String dbpQuery = "PREFIX dbp: <http://dbpedia.org/property/>SELECT ?x WHERE {\t?x dbp:title ?a.   \t?x dbp:author ?b}";
-
-    private static final String dctermsQuery = "PREFIX dcterms: <http://purl.org/dc/terms/> SELECT ?x WHERE {            ?x dcterms:title ?a .            ?x dcterms:creator ?b .}";
-
-    private static final String foafQuery = "PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT ?x WHERE {\t?x foaf:title ?a.   \t?x foaf:person ?b}";
-
-    private static final String purlQuery = "SELECT ?x WHERE {            ?x <http://purl.org/dc/terms/title> ?a .            ?x <http://purl.org/dc/terms/creator> ?b .}";
-
-    private static final String schemaQuery = "PREFIX schema: <http://schema.org/> SELECT ?x WHERE {            ?x schema:name ?a .            ?x schema:author ?b .}";
-
-    private static final String swrcQuery = "PREFIX swrc: <http://swrc.ontoware.org/ontology#> SELECT ?x WHERE {            ?x swrc:title ?a .            ?x swrc:author ?b . }";
-
 
     public static final String _QueryInferencing = "http://lodatio.informatik.uni-kiel.de:8082/LodatioLogic/QueryInferencing?";
     public static final String _MultiMapper = "http://lodatio.informatik.uni-kiel.de:8082/LodatioLogic/MultiMapper?";

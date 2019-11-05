@@ -14,6 +14,7 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.core.CountRequest;
 import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchHits;
@@ -145,12 +146,14 @@ public class ElasticsearchClient {
         SearchRequest searchRequest = new SearchRequest(index);
         searchRequest.types(type);
 
+        //TODO FIXME Title query does not work properly
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         if(title != null)
-            searchSourceBuilder.query(matchQuery("title", title));
+            searchSourceBuilder.query(QueryBuilders.matchPhraseQuery("title", title));
         else
             searchSourceBuilder.query(matchAllQuery());
 
+        System.out.println(searchSourceBuilder);
         searchSourceBuilder.size(size);
         searchRequest.source(searchSourceBuilder);
         searchRequest.scroll(TimeValue.timeValueMinutes(1L));
@@ -172,4 +175,6 @@ public class ElasticsearchClient {
             return null;
         }
     }
+
+    //TODO FIXME delete scroll context when done
 }

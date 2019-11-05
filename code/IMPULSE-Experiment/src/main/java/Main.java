@@ -47,6 +47,23 @@ public class Main {
     }
 
 
+    private static void deduplicate(String index){
+        ElasticsearchClient elasticsearchClient = new ElasticsearchClient(index, TYPE, BULK_SIZE);
+        Deduplicate deduplicate = new Deduplicate(elasticsearchClient);
+        try {
+            deduplicate.findAllDuplicates();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            try {
+                elasticsearchClient.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
     private static void analyzeDataset(String index){
         ElasticsearchClient elasticsearchClient = new ElasticsearchClient(index, TYPE, BULK_SIZE);
         DatasetStatistics datasetStatistics = new DatasetStatistics(elasticsearchClient);
@@ -73,7 +90,8 @@ public class Main {
         if(reIndexData)
             indexData(index, filename);
 
-        analyzeDataset(index);
+        deduplicate(index);
+//        analyzeDataset(index);
 
 
 }

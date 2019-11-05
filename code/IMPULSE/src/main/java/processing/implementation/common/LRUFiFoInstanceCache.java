@@ -5,38 +5,38 @@ import main.java.common.interfaces.IResource;
 import main.java.processing.interfaces.IElementCache;
 import main.java.processing.interfaces.IElementCacheListener;
 import main.java.utils.LRUCache;
+import org.apache.commons.collections.ArrayStack;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.*;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
+
 
 /**
- * A first-in-first-out (FIFO) cache implementation for locatable Objects.
- * Objects are stored as long as the internal capacity is not exhausted. At that
- * point, the earliest added entry will be removed to clear some space for the
- * new entry. If the cache is closed, all not yet removed entries will be
- * removed and listeners will be informed of the closing. Each removed entry
- * will be given to the registered listeners
- *
- * @param <T> The instanceelements type
- * @author Bastian
+ * @param <T>
  */
 public class LRUFiFoInstanceCache<T extends ILocatable> implements
         IElementCache<T> {
     private static final Logger logger = LogManager.getLogger(LRUFiFoInstanceCache.class.getSimpleName());
+    private static final int loggingInterval = 5000;
 
+    //location where to store elements that do no fit in main memory
     private String diskCachedElements;
+    //Least-Recently Used (LRU) elements stored in memory
     private LRUCache<IResource, T> memoryCachedElements;
-    private Queue<IResource> fifoQueue;
-    private int capacity;
-    private List<IElementCacheListener<T>> listeners;
+    //keep track of all elements to evict them later: First-in-First-out (FiFo).
+    //allow more than Integer.MAX_VALUE elements, i.e., Integer.MAX_VALUE * Integer.MAX_VALUE values
+    private Stack<Queue<IResource>> fifoQueues;
 
-    // FIXME int might be too small, Queue only allows int as size
-    private int maxSize = 0;
+    //maximum number of elements store in memory
+    private int capacity;
+
+    //maximum number of elements actually stored in memory/disk
+    private long maxSize = 0;
+
+    //flush elements to each listener afterwards
+    private List<IElementCacheListener<T>> listeners;
 
     /**
      * Constructor. Creates a cache with the highest integer as capacity
@@ -59,7 +59,8 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
         new File(diskCachedElements).mkdirs();
         memoryCachedElements = new LRUCache<>(capacity, 0.75f);
         listeners = new ArrayList<>();
-        fifoQueue = new ArrayDeque<>();
+        fifoQueues = new Stack<>();
+        fifoQueues.add(new ArrayDeque<>());
         this.capacity = capacity;
     }
 
@@ -87,7 +88,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
             else {
                 T element = getFromDisk(res);
                 //add to cache
-                memoryCachedElements.put(element.getLocator(), element);
+                put(element);
                 return element;
             }
         } else
@@ -102,8 +103,11 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
      * @return
      */
     @Override
-    public int size() {
-        return fifoQueue.size();
+    public long size() {
+        long size = 0L;
+        for (Queue<IResource> queue : fifoQueues)
+            size += queue.size();
+        return size;
     }
 
 
@@ -111,9 +115,10 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
         // if memory is full -> move eldest entry to disk
         if (memoryCachedElements.size() >= capacity) {
             T eldestElement = memoryCachedElements.getEldestEntry().getValue();
-            if (size() % 1000 == 0)
+            if (size() % loggingInterval == 0)
                 System.out.format("Instances parsed: %08d    \r", size());
 
+            //do not delete old element but store on disk
             saveToDisk(eldestElement);
             memoryCachedElements.remove(eldestElement.getLocator());
         }
@@ -121,32 +126,52 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
         memoryCachedElements.put(i.getLocator(), i);
     }
 
+
+    /**
+     * ArrayDeque.MAX_ARRAY_SIZE = 2147483639
+     *
+     * @param resource
+     */
+    private void addToQueue(IResource resource) {
+        //start from last queue
+        if (fifoQueues.get(fifoQueues.size() - 1).size() >= 2147483639) {
+            //last queue is already full
+            ArrayDeque<IResource> newQueue = new ArrayDeque<>();
+            newQueue.add(resource);
+            fifoQueues.push(newQueue);
+        } else
+            fifoQueues.get(fifoQueues.size() - 1).add(resource);
+    }
+
+    private IResource pollFromQueue() {
+        //start from last queue
+        if (fifoQueues.peek().size() <= 0) {
+            //last queue is empty, remove it
+            fifoQueues.pop();
+        }
+        //if there is still a queue, return an element from it
+        if(fifoQueues.size() > 0)
+            return fifoQueues.peek().poll();
+        else
+            return null;
+    }
+
     @Override
     public void add(T i) {
         if (!contains(i)) {
-            //completely new!!!
-            fifoQueue.add(i.getLocator());
+            //new resource, add to queue
+            addToQueue(i.getLocator());
             //increase total counter
-            maxSize = Math.max(maxSize, size());
-            //add element to memory, dump something to disk if necessary
+            maxSize++;
         }
-        put(i);
-        //else if in memory cache, simply overwrite
-//        if(memoryCachedElements.containsKey(i.getLocator()))
-//            memoryCachedElements.put(i.getLocator(), i);
-//        else{
-        //is currently stored on disk only
         //add element to memory, dump something to disk if necessary
-        //           put(i);
-//        }
-
-
+        put(i);
     }
 
     private void removeLast() {
-        IResource first = fifoQueue.poll();
+        IResource first = pollFromQueue();
         T el = get(first);
-        if (size() % 1000 == 0)
+        if (size() % loggingInterval == 0)
             System.out.format("\t\t\t\t\t\t\t\t\t\t\t\t\t\tIC: %08d / %08d\r", size(), maxSize);
 
         notifyListeners(el);
@@ -161,8 +186,8 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
     @Override
     public void flush(boolean deleteAfterwards) {
         while (size() != 0) {
-            if (size() % 1000 == 0)
-                System.out.format("Items flushed: %08d    \r", size());
+            if (size() % loggingInterval == 0)
+                System.out.format("Items remaining: %08d    \r", size());
             removeLast();
         }
         if (deleteAfterwards) {
@@ -175,7 +200,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
                 currentFile.delete();
             }
             tmpFolder.delete();
-            fifoQueue = new ArrayDeque<>();
+            fifoQueues = new Stack<>();
         }
     }
 
@@ -195,12 +220,12 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
 
     private boolean diskContains(IResource resource) {
-        return new File(diskCachedElements + File.separator + String.valueOf(resource.hashCode()) + ".ser.tmp").exists();
+        return new File(diskCachedElements + File.separator + resource.hashCode() + ".ser.tmp").exists();
     }
 
     private T getFromDisk(IResource resource) {
         T res = null;
-        File file = new File(diskCachedElements + File.separator + String.valueOf(resource.hashCode()) + ".ser.tmp");
+        File file = new File(diskCachedElements + File.separator + resource.hashCode() + ".ser.tmp");
         if (file.exists()) {
             try {
                 ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));

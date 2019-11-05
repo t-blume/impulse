@@ -3,7 +3,7 @@ package main.java.processing.implementation;
 
 import main.java.common.data.model.DataItem;
 import main.java.common.interfaces.IInstanceElement;
-import main.java.processing.implementation.common.DataItemCache;
+import main.java.processing.implementation.common.DataItemBuffer;
 import main.java.processing.implementation.parsing.MOVINGParser;
 import main.java.processing.interfaces.IElementCacheListener;
 import org.apache.logging.log4j.LogManager;
@@ -18,42 +18,33 @@ public class Harvester implements IElementCacheListener<IInstanceElement> {
     //Parser that used the imported mapping file to convert RDF instances to JSON instances
     private MOVINGParser parser;
 
-    //temporary in-memory storage for parsed JSON instances
-    private DataItemCache jsonCache;
+    //temporary in-memory storage for parsed JSON instances before flushing
+    private DataItemBuffer jsonCache;
 
-    private int limit;
 
-    int successfull = 0;
-    int errornous = 0;
+    private int successful = 0;
+    private int erroneous = 0;
 
-    public Harvester(MOVINGParser parser, DataItemCache jsonCache, int limit) {
+    public Harvester(MOVINGParser parser, DataItemBuffer dataItemBuffer) {
         this.parser = parser;
-        this.jsonCache = jsonCache;
-        this.limit = limit;
+        this.jsonCache = dataItemBuffer;
     }
 
 
     @Override
     public void elementFlushed(IInstanceElement instance) {
-//        System.out.println(instance.getLocator());
-//        System.out.println(instance.getOutgoingQuints());
         DataItem dataItem = parser.convertInstance2JSON(instance);
-
         if (dataItem != null && dataItem.getMetadataPersons() != null) {
             jsonCache.add(dataItem);
-            if(jsonCache.size() > limit) {
-                logger.info("Flushing intermediate chunk of " + jsonCache.size() + " items to sinks!");
-                jsonCache.flush();
-            }
-            successfull++;
+            successful++;
         } else
-            errornous++;
+            erroneous++;
 
     }
 
     @Override
     public void finished() {
-        logger.info("Harvesting of " + successfull + "/" + (successfull + errornous) + " finished successfully, flushing to sinks...");
+        logger.info("Harvesting of " + successful + "/" + (successful + erroneous) + " finished successfully, flushing to sinks...");
         jsonCache.flush();
     }
 }

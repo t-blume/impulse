@@ -9,7 +9,6 @@ import main.java.common.interfaces.IInstanceElement;
 import main.java.common.interfaces.IQuint;
 import main.java.common.interfaces.IResource;
 import main.java.processing.interfaces.IElementCache;
-import main.java.utils.Constants;
 import main.java.utils.DataCleansing;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -54,15 +53,12 @@ public class MOVINGParser {
     private int missingVenue;
     private int missingConcept;
 
-    private Boolean downloadCacheMiss = false;
-
 
     private boolean cacheMiss = false;
 
-    public MOVINGParser(IElementCache<IInstanceElement> rdfInstanceCache, Mapping mapping, boolean downloadCacheMiss) {
+    public MOVINGParser(IElementCache<IInstanceElement> rdfInstanceCache, Mapping mapping) {
         this.rdfInstanceCache = rdfInstanceCache;
         this.mapping = mapping;
-        this.downloadCacheMiss = downloadCacheMiss;
 
         setMissingConcept(0);
         setMissingPerson(0);
@@ -73,8 +69,6 @@ public class MOVINGParser {
             mandatory predicates holds a list with alternative predicates. Each entry in the
             list has one or more alternatives of which one has to be met
          */
-
-
         mandatoryPredicates = new LinkedList<>();
         Set<String> mandatoryKeys = mapping.getProperties();
 
@@ -88,7 +82,6 @@ public class MOVINGParser {
             }
         });
 
-
         Set<String> types = mapping.getTypes();
         String[] tmps = new String[types.size()];
         types.toArray(tmps);
@@ -99,59 +92,7 @@ public class MOVINGParser {
     }
 
 
-
-
-    private boolean testInstance(IInstanceElement instanceElement) {
-        if (instanceElement == null)
-            return false;
-
-
-        //for each predicate a list of alternatives is possible
-//        for (String[] predicates : mandatoryPredicates) {
-//
-//            boolean found = false;
-//            //for each list of alternative predicates, check if at least 1 is present
-//            for (IQuint quint : instanceElement.getOutgoingQuints()) {
-//                for (String predicate : predicates) {
-//                    if (predicate.equals(quint.getPredicate().toString())) {
-//                        found = true;
-//                        break;
-//                    }
-//                }
-//            }
-//            if (!found)
-//                return false;
-//        }
-
-
-        for (String[] types : mandatoryTypes) {
-            boolean found = false;
-            for (IQuint quint : instanceElement.getOutgoingQuints()) {
-                if (quint.getPredicate().toString().equals(Constants.RDF_TYPE)) {
-                    for (String type : types) {
-                        if (type.equals(quint.getObject().toString())) {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!found)
-                return false;
-
-        }
-        return true;
-    }
-
     public DataItem convertInstance2JSON(IInstanceElement instanceElement) {
-
-        // check if the mandatory attributes are present
-
-//        if (!testInstance(instanceElement))
-//            return null;
-
-
-//        System.out.println(instanceElement.getOutgoingQuints());
         DataItem dataItem = new DataItem();
         dataItem.setSourceURLs(new HashSet<>());
 
@@ -164,9 +105,7 @@ public class MOVINGParser {
             //limit instance size
             if (size >= 50000)
                 continue;
-
             size--;
-//            System.out.format("\t\t\t\t\t\t\t\t\t\t\t\t\t\tOutgoingquints left: %08d \r", size);
             try {
                 dataItem.getSourceURLs().add(new URI(editStrings(getContext(instanceElement))));
             } catch (URISyntaxException e) {
@@ -177,7 +116,6 @@ public class MOVINGParser {
                 URI property = new URI(editStrings(quint.getPredicate().toString()));
                 String object = quint.getObject().toString();
                 String[] alternatives;
-
 
                 //TITLE:
                 alternatives = convertJSONArray2StringArray(
@@ -205,14 +143,7 @@ public class MOVINGParser {
                         mapping.getMappings().getJSONArray("metadata_persons"));
 
                 if (contains(alternatives, property.toString())) {
-
                     parseComplexPerson(quint, dataItem);
-
-                    if (cacheMiss && downloadCacheMiss) {
-                        requestRDFResource(quint.getObject(), quint.getContext(), instanceElement.getOutgoingQuints());
-                        cacheMiss = false;
-                    }
-
                     continue;
                 }
 
@@ -220,13 +151,8 @@ public class MOVINGParser {
                 alternatives = convertJSONArray2StringArray(mapping.getMappings().getJSONArray("concepts"));
                 if (contains(alternatives, property.toString())) {
                     parseComplexConcept(quint, dataItem);
-                    if (cacheMiss && downloadCacheMiss) {
-                        requestRDFResource(quint.getObject(), quint.getContext(), instanceElement.getOutgoingQuints());
-                        cacheMiss = false;
-                    }
                     continue;
                 }
-
 
                 //STARTDATE
                 alternatives = convertJSONArray2StringArray(
@@ -250,35 +176,8 @@ public class MOVINGParser {
                         mapping.getMappings().getJSONArray("metadata_venue"));
                 if (contains(alternatives, property.toString())) {
                     parseComplexVenue(quint, dataItem);
-                    if (cacheMiss && downloadCacheMiss) {
-                        requestRDFResource(quint.getObject(), quint.getContext(), instanceElement.getOutgoingQuints());
-                        cacheMiss = false;
-                    }
                     continue;
                 }
-
-//                alternatives = convertJSONArray2StringArray(
-//                        mapping.getMappings().getJSONArray("language"));
-//                if (contains(alternatives, property)) {
-//                    if (quint.getObject() instanceof NodeResource) {
-//                        NodeResource nr = (NodeResource) quint.getObject();
-//
-//                        /*
-//                        if (nr.getNode() instanceof RDFDataset.Literal)
-//
-//                        {
-//                            String language = parseLanguage(quint.getObject().toString());
-//                            if (language != null)
-//                                dataItem.setLanguage(language);
-//                        } else {
-//                            //FIXME:
-//                            parseLangURL(quint.getObject().toString(), dataItem);
-//                        }
-//*/
-//
-//                    }
-
-
             } catch (URISyntaxException e) {
                 logger.warn(e.getMessage());
             }
@@ -287,82 +186,24 @@ public class MOVINGParser {
         return dataItem;
     }
 
-    private void requestRDFResource(IResource object, IResource quintContext, Set<IQuint> outgoingQuints) {
-//TODO erroe code handling
-        try {
-
-
-            System.out.println("Resource to process: " + object);
-            String url = object.toString();
-            Model model = ModelFactory.createDefaultModel();
-            //Request resource
-            model.read(url);
-            // model.write(System.out, "NQUAD");
-
-            outgoingQuints.forEach(x -> addNewData(x));
-            StmtIterator it = model.listStatements();
-
-            while (it.hasNext()) {
-                Statement stmt = it.next();
-
-                //process statement to own data format
-                Node[] nodes = new Node[]{new Resource(stmt.getSubject().toString()), new Resource(stmt.getPredicate().toString()), new Resource(stmt.getObject().toString()), new Resource(quintContext.toString())};
-
-                Node subject = nodes[0];
-                Node predicate = nodes[1];
-                Node object2 = nodes[2];
-                Node context = nodes[3];
-
-                IQuint quint = null;
-
-                quint = new Quad(new NodeResource(subject), new NodeResource(
-                        predicate), new NodeResource(object2), new NodeResource(
-                        context));
-
-//           // outgoingQuints.add(quint);
-
-                addNewData(quint);
-
-
-            }
-        } catch (RiotNotFoundException e) {
-            logger.warn(e.getMessage());
-        }
-
-    }
-
-    private void addNewData(IQuint x) {
-        Node[] nodes = new Node[]{new Resource(x.getSubject().toString()), new Resource(x.getPredicate().toString()), new Resource(x.getObject().toString()), new Resource(x.getContext().toString())};
-        String s = "";
-        for (Node n : nodes) {
-
-            s = s + n.toString() + " ";
-
-        }
-        s = s + ".";
-        newData.add(s);
-    }
-
-
     public void finished() {
         logger.info("Harvesting finished!");
         logger.info("Successfully parsed " + dataItemCounter + " bibliographic data items");
         logger.info("Data Items with more than 1 title: " + dataItemsWithMoreThanOneTitle);
         logger.info("Data Items with more than 1 abstract: " + dataItemsWithMoreThanOneAbstract);
-
     }
 
     //////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////
 
     private void parseComplexConcept(IQuint quint, DataItem dataItem) throws URISyntaxException {
-
         if (quint.getObject() instanceof NodeResource) {
             if (dataItem.getKeywords() == null)
                 dataItem.setKeywords(new HashSet<>());
 
             if (dataItem.getConcepts() == null)
                 dataItem.setConcepts(new HashSet<>());
+
             NodeResource nr = (NodeResource) quint.getObject();
 
             //First Case if object is literal add label to keywords
@@ -373,10 +214,8 @@ public class MOVINGParser {
                 keywords.setLabel(keywordString);
 
                 String[] parts = keywordString.split(" ");
-                for (int i = 0; i < parts.length; i++) {
+                for (int i = 0; i < parts.length; i++)
                     dataItem.getKeywords().add(dataCleansing.cleanse(parts[i]));
-                }
-
 
             } else {
                 //Second Case if object is and URI get URI from InstanceCache and Parse Label
@@ -406,7 +245,6 @@ public class MOVINGParser {
                     //Third Case, Resource is not in Cache. Download Resource
                     cacheMiss = true;
                     missingConcept++;
-                    //TODO
                 }
             }
         }
@@ -425,9 +263,7 @@ public class MOVINGParser {
 
                 if (objectElement != null) {
                     MetadataVenue venue = new MetadataVenue();
-
                     try {
-
                         //Check if Subject is a BNode
                         venue.setURIs(new HashSet<>());
                         if (editStrings(nr.getNode().toString()).startsWith("_:")) {
@@ -466,7 +302,6 @@ public class MOVINGParser {
                     }
                     dataItem.setMetadataVenue(venue);
                 } else {
-                    //TODO: handle download
                     cacheMiss = true;
                     missingVenue++;
                 }
@@ -476,11 +311,8 @@ public class MOVINGParser {
 
 
     private void parseComplexPerson(IQuint quint, DataItem dataItem) throws URISyntaxException {
-
         HashSet<MetadataPerson> metadataPeople = new HashSet<>();
-
         if (quint.getObject() instanceof NodeResource) {
-
             NodeResource nr = (NodeResource) quint.getObject();
             //Simple Case: links to a literal:
             if (nr.getNode() instanceof Literal) {
@@ -490,14 +322,11 @@ public class MOVINGParser {
 
                 // add authors, contributors
                 dataItem.getMetadataPersons().addAll(personSet);
-
                 //Blanknode handling
             } else if (nr.getNode() instanceof BNode) {
-
                 IResource targetInstanceLocator = new TypedResource(quint.getObject(), RDFInstance.RESOURCE_TYPE);
                 IInstanceElement objectElement = rdfInstanceCache.get(targetInstanceLocator);
                 boolean organisation = quint.getObject().toString().contains("organization");
-
                 try {
                     rdfInstanceCache.get(objectElement.getLocator()).getOutgoingQuints().forEach(x -> {
                         if (x.getObject() instanceof NodeResource) {
@@ -505,7 +334,7 @@ public class MOVINGParser {
                             IInstanceElement objectElement2 = rdfInstanceCache.get(targetInstanceLocator2);
                             if (objectElement2 != null) {
                                 for (IQuint objectQuint : objectElement2.getOutgoingQuints()) {
-                                    MetadataPerson metadataPerson = extractPersons(objectQuint, organisation, dataItem);
+                                    MetadataPerson metadataPerson = extractPersons(objectQuint, organisation);
                                     if (metadataPerson != null)
                                         metadataPeople.add(metadataPerson);
                                 }
@@ -559,7 +388,6 @@ public class MOVINGParser {
                             }
                         }
                         if (!found) {
-
                             //Check if subject is a BNode
                             metadataPerson.setURIs(new HashSet<>());
                             if (editStrings(nr.getNode().toString()).startsWith("_:")) {
@@ -581,22 +409,18 @@ public class MOVINGParser {
                             if (objectElement2 != null) {
                                 for (IQuint objectQuint2 : objectElement2.getOutgoingQuints()) {
 
-                                    metadataPerson = extractPersons(objectQuint2, false, dataItem);
+                                    metadataPerson = extractPersons(objectQuint2, false);
                                     if (metadataPerson != null)
                                         metadataPeople.add(metadataPerson);
                                 }
                             }
                         } else {
-                            metadataPerson = extractPersons(objectQuint, organisation, dataItem);
+                            metadataPerson = extractPersons(objectQuint, organisation);
                             if (metadataPerson != null)
                                 metadataPeople.add(metadataPerson);
                         }
-
-
                     }
                 } else {
-                    //TODO: what to do here? ...
-                    //If Person is not in Cache download person data
                     cacheMiss = true;
                     missingPerson++;
                 }
@@ -608,7 +432,7 @@ public class MOVINGParser {
     //////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////
 
-    private MetadataPerson extractPersons(IQuint objectQuint, boolean organisation, DataItem dataItem) {
+    private MetadataPerson extractPersons(IQuint objectQuint, boolean organisation) {
 
         MetadataPerson metadataPerson = new MetadataPerson();
         MetadataOrganisation metadataOrganisation = new MetadataOrganisation();
@@ -631,24 +455,18 @@ public class MOVINGParser {
             String[] alternatives = convertJSONArray2StringArray(
                     mapping.getMappings().getJSONObject("metadata_person_mapping").getJSONArray("rawName"));
             if (contains(alternatives, objectProperty.toString())) {
-
                 metadataPerson.setRawName(dataCleansing.cleanse(objectQuint.getObject().toString()));
                 metadataOrganisation.setName(objectQuint.getObject().toString());
-
                 if (!organisation) {
-
                     String[] strings = objectQuint.getObject().toString().split(" and ");
-
-                    for (String t : strings) {
+                    for (String t : strings)
                         return parseAuthorString(dataCleansing.cleanse(t), metadataPerson);
-                    }
+
                 } else {
                     //if creator is an organization
                     MetadataPerson metadataOrg = new MetadataPerson();
-
                     metadataOrg.setRawName(metadataOrganisation.getName());
                     metadataOrg.setURIs(new HashSet<>());
-
                     //Check if subject is a BNode
                     if (editStrings(objectQuint.getSubject().toString()).startsWith("_:")) {
                         metadataOrg.getURIs().add(new URI(editStrings(objectQuint.getContext().toString())));
@@ -656,7 +474,6 @@ public class MOVINGParser {
                         metadataOrg.getURIs().add(new URI(objectQuint.getSubject().toString()));
 
                     }
-
                     metadataOrg.setRoles(new HashSet<>());
                     metadataOrg.getRoles().addAll(roles);
                     return metadataOrg;
@@ -816,7 +633,7 @@ public class MOVINGParser {
     private static List<Date> parseDate(String rawDate) {
         rawDate = rawDate.replaceAll("\"", "");
         rawDate = rawDate.trim();
-        //FIXME: known bugs of the parser
+        //fixes known bugs of the parser
         if (rawDate.matches("[0-9]{4}"))
             rawDate += "-01-01";
         else if (rawDate.matches("[0-9]{4}-[0-1][0-9]"))

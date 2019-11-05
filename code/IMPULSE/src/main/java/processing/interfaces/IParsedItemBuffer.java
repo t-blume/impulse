@@ -2,7 +2,7 @@ package main.java.processing.interfaces;
 
 import main.java.output.interfaces.IJsonSink;
 
-public interface IParsedItemCache<T> {
+public interface IParsedItemBuffer<T> {
 
     /**
      * add Item to cache
@@ -40,4 +40,7 @@ public interface IParsedItemCache<T> {
 
 
     int size();
+
+
+    void close();
 }
