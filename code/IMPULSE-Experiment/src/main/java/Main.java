@@ -1,11 +1,9 @@
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
+import analyzer.DatasetStatistics;
+import analyzer.Deduplicate;
+import connector.ElasticsearchClient;
+import helper.DataItem;
+
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 
 
 /**
@@ -30,14 +28,14 @@ public class Main {
     private static void indexData(String index, String filename) {
         ElasticsearchClient elasticsearchClient = new ElasticsearchClient(index, TYPE, BULK_SIZE);
         try {
-            System.out.println("Deleted previous index: " + elasticsearchClient.clear());
+            if(elasticsearchClient.exists())
+                System.out.println("Deleted previous index: " + elasticsearchClient.clear());
             int[] result = elasticsearchClient.bulkUploadFile(filename);
             System.out.println("Uploaded: " + result[0]);
             System.out.println("Failed: " + result[1]);
         } catch (IOException e) {
             e.printStackTrace();
-        }
-        finally {
+        } finally {
             try {
                 elasticsearchClient.close();
             } catch (IOException e) {
@@ -47,14 +45,17 @@ public class Main {
     }
 
 
-    private static void deduplicate(String index){
+
+
+
+    private static void deduplicate(String index, DataItem.InputType inputType) {
         ElasticsearchClient elasticsearchClient = new ElasticsearchClient(index, TYPE, BULK_SIZE);
-        Deduplicate deduplicate = new Deduplicate(elasticsearchClient);
+        Deduplicate deduplicate = new Deduplicate(elasticsearchClient, inputType);
         try {
             deduplicate.findAllDuplicates();
         } catch (IOException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             try {
                 elasticsearchClient.close();
             } catch (IOException e) {
@@ -64,14 +65,14 @@ public class Main {
     }
 
 
-    private static void analyzeDataset(String index){
+    private static void analyzeDataset(String index, DataItem.InputType inputType) {
         ElasticsearchClient elasticsearchClient = new ElasticsearchClient(index, TYPE, BULK_SIZE);
-        DatasetStatistics datasetStatistics = new DatasetStatistics(elasticsearchClient);
+        DatasetStatistics datasetStatistics = new DatasetStatistics(elasticsearchClient, inputType);
         try {
             datasetStatistics.runStatistics();
         } catch (IOException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             try {
                 elasticsearchClient.close();
             } catch (IOException e) {
@@ -84,17 +85,27 @@ public class Main {
         //TODO add parameter
         boolean reIndexData = false;
 
-        String index = "impulse-test";
-        String filename = "testresources/context-sample-rdf-data.json";
+        String btc14Index = "btc-14";
+        String btc14File = "testresources/context-sample-rdf-data.json";
 
-        if(reIndexData)
-            indexData(index, filename);
+        String zbwIndex = "zbw";
+        String zbwFile = "testresources/zbw-res_2019-09-04.json";
 
-        deduplicate(index);
-//        analyzeDataset(index);
+        if (reIndexData) {
+            indexData(btc14Index, btc14File);
+            indexData(zbwIndex, zbwFile);
+        }
+        else {
+//            deduplicate(btc14Index, DataItem.InputType.MOVING);
+//            analyzeDataset(btc14Index, DataItem.InputType.MOVING);
 
 
-}
+            deduplicate(zbwIndex, DataItem.InputType.ZBW);
+            analyzeDataset(zbwIndex, DataItem.InputType.ZBW);
+        }
+
+
+    }
 
 }
 
