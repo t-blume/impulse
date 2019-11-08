@@ -5,7 +5,6 @@ import main.java.common.interfaces.IResource;
 import main.java.processing.interfaces.IElementCache;
 import main.java.processing.interfaces.IElementCacheListener;
 import main.java.utils.LRUCache;
-import org.apache.commons.collections.ArrayStack;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -38,23 +37,15 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
     //flush elements to each listener afterwards
     private List<IElementCacheListener<T>> listeners;
 
-    /**
-     * Constructor. Creates a cache with the highest integer as capacity
-     */
-    public LRUFiFoInstanceCache() {
-        this(Integer.MAX_VALUE, "tmp");
-    }
-
-    public LRUFiFoInstanceCache(int capacity) {
-        this(capacity, "disk-cache");
-    }
+    //delete disk cache afterwards?
+    private boolean deleteDiskCache;
 
     /**
      * Constructor. Creates a cache with the given capacity
      *
      * @param capacity The capacity
      */
-    public LRUFiFoInstanceCache(int capacity, String diskCachedElements) {
+    public LRUFiFoInstanceCache(int capacity, String diskCachedElements, boolean deleteDiskCache) {
         this.diskCachedElements = diskCachedElements;
         new File(diskCachedElements).mkdirs();
         memoryCachedElements = new LRUCache<>(capacity, 0.75f);
@@ -62,6 +53,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
         fifoQueues = new Stack<>();
         fifoQueues.add(new ArrayDeque<>());
         this.capacity = capacity;
+        this.deleteDiskCache = deleteDiskCache;
     }
 
     @Override
@@ -213,7 +205,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
     public void close() {
         logger.info("Closing Instance Cache, flushing " + size() + " instances to listeners.");
         //FIXME deleting more than MAX_INT files probably causes program to crash
-        flush(false);
+        flush(deleteDiskCache);
         for (IElementCacheListener<T> l : listeners)
             l.finished();
     }

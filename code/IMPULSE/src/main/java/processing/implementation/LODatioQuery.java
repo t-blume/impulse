@@ -22,71 +22,16 @@ public class LODatioQuery {
 
     public static final String _QueryInferencing = "http://lodatio.informatik.uni-kiel.de:8082/LodatioLogic/QueryInferencing?";
     public static final String _MultiMapper = "http://lodatio.informatik.uni-kiel.de:8082/LodatioLogic/MultiMapper?";
-    public static Mapping mapping = null;
 
     private static List<String> attributes;
     private static Set<String> type;
     private static Set<String> query;
 
-    private HashSet<String> datasourceURIs = new HashSet<>();
     private static Map map = new HashMap();
     private static Map map_mapping = new HashMap();
     private static Map map_mapping_person = new HashMap();
     private static Map map_mapping_concept = new HashMap();
     private static JSONObject inferencedMapping;
-    private static JSONObject JSONtoExport;
-
-
-    public static void main(String[] args) throws IOException {
-//        String mappingString = readFile("testresources/sample-mapping.json");
-//
-//        Mapping mapping = new Mapping(mappingString);
-//
-//
-//        mappingInferencing(mapping, "sample-mapping.json");
-
-
-//        System.out.println("Super Queries:");
-//        querySuperQueries(biboQuery).forEach(Q -> System.out.println(Q));
-//        System.out.println("Super properties: ");
-//        querySuperProperties("http://purl.org/dc/terms/title").forEach(Q -> System.out.println(Q));
-//        System.out.println("Super Types:");
-//        querySuperTypes("http://purl.org/ontology/bibo/Article").forEach(Q -> System.out.println(Q));
-//
-//        System.out.println("Datasource:");
-//        queryDatasource(biboQuery, -1, false).forEach(D -> System.out.println(D));
-
-
-        String mappingString = readFile("mappings\\normal_mappings\\dcterms-mapping.json");
-
-        mapping = new Mapping(mappingString);
-
-        Set<String> queries = mapping.getQueries();
-
-        PrintWriter out = new PrintWriter("seedlist_dcterms_inferenced.file");
-
-
-//        queries.forEach(x -> {
-//            try {
-//                queryDatasource(x, -1, true).forEach(D -> out.println(D));
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        });
-
-        out.flush();
-        out.close();
-
-         mappingInferencing(mapping,"mappings\\query_with_type_mappings\\dcterms-mapping.json" );
-
-         System.out.println("Datasource (inferencing):");
-
-
-//        queryDatasource(biboQuery, -1, true).forEach(D -> System.out.println(D));
-
-
-//        buildQueries(mapping).forEach(Q -> System.out.println(Q));
-    }
 
 
     /**
@@ -205,8 +150,6 @@ public class LODatioQuery {
 
         //Predicates Inferencing
 
-        //TODO adding complex Concepts parsing
-
         //TITLE:
         List<String> title;
         title = convertJSONArray2StringList(mapping.getMappings().getJSONArray("title"));
@@ -244,7 +187,7 @@ public class LODatioQuery {
 
         metadata_persons.forEach(x -> {
             try {
-                JSONIterator(x.toString(), attributes);
+                JSONIterator(x, attributes);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -259,7 +202,7 @@ public class LODatioQuery {
 
         startDate.forEach(x -> {
             try {
-                JSONIterator(x.toString(), attributes);
+                JSONIterator(x, attributes);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -288,7 +231,7 @@ public class LODatioQuery {
 
         language.forEach(x -> {
             try {
-                JSONIterator(x.toString(), attributes);
+                JSONIterator(x, attributes);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -409,8 +352,6 @@ public class LODatioQuery {
 
 //********************************************************************************************************************\\
         inferencedMapping = new JSONObject();
-        JSONtoExport = new JSONObject();
-
 
         inferencedMapping.put("queries", mapping.getQueries());
 
@@ -423,7 +364,6 @@ public class LODatioQuery {
 
         System.out.println(inferencedMapping.toString());
         try (FileWriter file = new FileWriter(m.replace(".json", "_inferenced.json"))) {
-            //file.write("{" +JSONtoExport.toString()+ "}");
             file.write(inferencedMapping.toString());
             System.out.println("Finished... Successfully Copied JSON Object to File...");
         }
@@ -446,46 +386,7 @@ public class LODatioQuery {
         types.addAll(querySuperTypes(t));
     }
 
-
     private static void JSONIteratorQuery(String q, HashSet<String> queries) throws IOException {
         queries.addAll(querySuperQueries(q));
     }
-
-
-//    /**
-//     * uses the mandatory types and properties to build a query for LODatio+
-//     * (probably will not use it in the end and continue using explicit queries in mapping file
-//     *
-//     * @param mapping
-//     * @return
-//     */
-//    public static Set<String> buildQueries(Mapping mapping) {
-//        Set<String> queryStrings = new HashSet<>();
-//        Query query = QueryFactory.create();
-//        query.setQuerySelectType();
-//        Node selectVar = NodeFactory.createVariable("x");
-//
-//        //TYPES
-//        Iterator<String> typeIterator = mapping.getTypes().iterator();
-//        ElementPathBlock outputTriplePatternBlock = new ElementPathBlock();
-//        while (typeIterator.hasNext()) {
-//            outputTriplePatternBlock.addTriple(
-//                    new Triple(selectVar, NodeFactory.createURI(Constants.RDF_TYPE),
-//                            NodeFactory.createURI(typeIterator.next())));
-//        }
-//        //PROPERTIES:
-//        Iterator<String> propertyIterator = mapping.getProperties().iterator();
-//        char c = 'a';
-//        while (propertyIterator.hasNext()) {
-//            outputTriplePatternBlock.addTriple(
-//                    new Triple(selectVar, NodeFactory.createURI(propertyIterator.next()),
-//                            NodeFactory.createVariable(String.valueOf(c))));
-//            c++;//FIXME: only variables a-z possible, more properties crash
-//        }
-//
-//        query.setQueryPattern(outputTriplePatternBlock);
-//        queryStrings.add(query.toString());
-//
-//        return queryStrings;
-//    }
 }

@@ -66,6 +66,9 @@ public class Main {
         Option memoryCacheSize = new Option("c", "cachesize", true, "instances stored in main memory");
         memoryCacheSize.setArgName("int");
         options.addOption(memoryCacheSize);
+        ////////////
+        Option deleteDiskCache = new Option("ddc", "deleteDiskCache", false, "Deletes the disk cache after processing. Caution, manually deleting in OS faster.");
+        options.addOption(deleteDiskCache);
         ///////////////////////////////////////////////////////////////////
         // read mapping and query
         Option mapping = new Option("m", "mapping", true, "location of mapping file");
@@ -150,14 +153,11 @@ public class Main {
         Mapping mapping = null;
         HashSet<String> datasourceURIs;
         boolean usePLDFilter = false;
-        boolean downloadCacheMiss = false;
 
         int cacheSize = Integer.MAX_VALUE;
 
-
         if (cmd.hasOption("c"))
             cacheSize = Integer.parseInt(cmd.getOptionValue("c"));
-
 
         //get input files
         if (cmd.hasOption("f")) {
@@ -214,9 +214,12 @@ public class Main {
 
         //source of RDF triples
         IQuintSource quintSource = null;
-        if (!inputFiles.isEmpty())
+        if (!inputFiles.isEmpty()) {
+
             quintSource = new FileQuadSource(inputFiles, true,
                     "http://harverster.informatik.uni-kiel.de/", fileFilter);
+
+        }
 
         //extract actual file name (without parent folders)
         String p = getFileName(inputFiles);
@@ -248,7 +251,7 @@ public class Main {
             quintSource.registerQuintListener(preProcessingPipelinePLD);
 
         //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
-        IElementCache<IInstanceElement> rdfInstanceCacheContext = new LRUFiFoInstanceCache<>(cacheSize);
+        IElementCache<IInstanceElement> rdfInstanceCacheContext = new LRUFiFoInstanceCache<>(cacheSize, "disk-cache_simple", cmd.hasOption("ddc"));
         InstanceAggregator instanceAggregatorContext = new InstanceAggregator(rdfInstanceCacheContext);
         preProcessingPipelineContext.registerQuintListener(instanceAggregatorContext);
 
@@ -257,7 +260,7 @@ public class Main {
         IElementCache<IInstanceElement> rdfInstanceCachePLD = null;
         if (usePLDFilter) {
             //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
-            rdfInstanceCachePLD = new LRUFiFoInstanceCache<>(cacheSize);
+            rdfInstanceCachePLD = new LRUFiFoInstanceCache<>(cacheSize, "disk-cache_pld", cmd.hasOption("ddc"));
             InstanceAggregator instanceAggregatorPLD = new InstanceAggregator(rdfInstanceCachePLD);
             preProcessingPipelinePLD.registerQuintListener(instanceAggregatorPLD);
         }
@@ -309,8 +312,7 @@ public class Main {
         /*
             export some statistics
          */
-
-        String simpleHarvestingInfoString = parserContext.getMissingConcept() + " Missing Concepts " +
+        String simpleHarvestingInfoString = "Simple Harvesting: " + parserContext.getMissingConcept() + " Missing Concepts " +
                 parserContext.getMissingPerson() + " Missing Persons " +
                 parserContext.getMissingVenue() + " Missing Venue! " +
                 (parserContext.getMissingVenue() + parserContext.getMissingPerson() + parserContext.getMissingConcept()) + " total Cachemisses!";
@@ -326,8 +328,8 @@ public class Main {
             e1.printStackTrace();
         }
 
-        if (usePLDFilter){
-            String pldHarvestingInfoString = parserPLD.getMissingConcept() + " Missing Concepts " +
+        if (usePLDFilter) {
+            String pldHarvestingInfoString = "PLD Harvesting: " + parserPLD.getMissingConcept() + " Missing Concepts " +
                     parserPLD.getMissingPerson() + " Missing Persons " +
                     parserPLD.getMissingVenue() + " Missing Venue! " +
                     (parserPLD.getMissingVenue() + parserPLD.getMissingPerson() + parserPLD.getMissingConcept()) + " total Cachemisses!";
