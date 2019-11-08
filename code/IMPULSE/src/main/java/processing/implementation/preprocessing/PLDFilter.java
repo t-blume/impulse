@@ -2,10 +2,10 @@ package main.java.processing.implementation.preprocessing;
 
 import main.java.common.interfaces.IQuint;
 import main.java.processing.interfaces.IQuintProcessor;
+import main.java.utils.MainUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -17,14 +17,14 @@ public class PLDFilter implements IQuintProcessor {
 
     private int counter = 0;
 
-    private Set<String> paylevelDomains;
+    private Set<String> payLevelDomains;
 
 
     public PLDFilter(Set<String> contexts) {
-        paylevelDomains = new HashSet<>();
+        payLevelDomains = new HashSet<>();
         contexts.forEach(C -> {
             try {
-                paylevelDomains.add(new URI(C).getHost());
+                payLevelDomains.add(MainUtils.extractPLD(MainUtils.normalizeURL(C)));
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             }
@@ -34,11 +34,10 @@ public class PLDFilter implements IQuintProcessor {
     @Override
     public List<IQuint> processQuint(IQuint q) throws URISyntaxException {
         List<IQuint> quints = new LinkedList<>();
-
-            if (paylevelDomains.contains(new URI(q.getContext().toString()).getHost()))
-                quints.add(q);
-            else
-                counter++;
+        if (payLevelDomains.contains(MainUtils.extractPLD(MainUtils.normalizeURL(q.getContext().toString()))))
+            quints.add(q);
+        else
+            counter++;
 
         return quints;
     }
@@ -51,7 +50,7 @@ public class PLDFilter implements IQuintProcessor {
     @Override
     public String toString() {
         return "PLDFilter{" +
-                "paylevelDomains: " + paylevelDomains.size() +
+                "payLevelDomains: " + payLevelDomains.size() +
                 '}';
     }
 }

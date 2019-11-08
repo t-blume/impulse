@@ -52,7 +52,6 @@ public class Utils {
         if(stringBuilder.toString() == null)
             System.out.println("ERRRROR: " + url);
         return stringBuilder.toString();
-
     }
 
 

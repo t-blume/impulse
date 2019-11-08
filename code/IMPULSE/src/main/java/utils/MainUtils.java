@@ -3,6 +3,8 @@ package main.java.utils;
 import org.json.JSONArray;
 
 import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -149,6 +151,51 @@ public class MainUtils {
             e.printStackTrace();
         }
         return jsonStrings;
+    }
+
+
+
+
+
+    public static String normalizeURL(String url) throws URISyntaxException {
+        if (url == null)
+            return null;
+        url = url.trim();
+        if (url.endsWith("/"))
+            url = url.substring(0, url.length() - 1);
+
+        URI uri = new URI(url);
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(uri.getHost() == null? "" : uri.getHost().replaceAll("www\\.", ""));
+        stringBuilder.append(uri.getPath() == null? "" : uri.getPath());
+        stringBuilder.append(uri.getQuery() == null? "" : uri.getQuery());
+        stringBuilder.append(uri.getFragment() == null? "" : uri.getFragment());
+
+        if(stringBuilder.toString() == null)
+            System.out.println("ERRRROR: " + url);
+        return stringBuilder.toString();
+    }
+
+
+    /**
+     * proper way to extract PLD
+     * @param uri
+     * @return
+     * @throws URISyntaxException
+     */
+    public static String extractPLD(String uri) throws URISyntaxException {
+        if (uri == null)
+            return null;
+        if(uri.trim().isEmpty())
+            return "";
+
+        URI parsedUri = new URI("http://" + uri);
+
+        String pld = parsedUri.getHost();
+        if(pld == null)
+            return parsedUri.toString();
+
+        return pld;
     }
 
 }

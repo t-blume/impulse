@@ -27,7 +27,7 @@ public class NodeResource implements IResource, Serializable {
 
 	/**
 	 * Getter for the raw internal {@link Node}
-	 * 
+	 *
 	 * @return The internal node
 	 */
 	public Node getNode() {
@@ -46,12 +46,10 @@ public class NodeResource implements IResource, Serializable {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (!(obj instanceof NodeResource)) {
+		if (!(obj instanceof NodeResource))
 			return false;
-		}
 
 		NodeResource other = (NodeResource) obj;
-
 		return res.equals(other.res);
 	}
 

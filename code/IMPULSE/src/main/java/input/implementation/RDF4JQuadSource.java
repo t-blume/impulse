@@ -185,8 +185,8 @@ public class RDF4JQuadSource implements IQuintSource {
             if (statements != null) {
                 while (statements.hasNext()) {
                     Statement statement = statements.next();
-                    quints.add(new Quad(new NodeResource(new org.semanticweb.yars.nx.Resource(statement.getSubject().stringValue())),
-                            new NodeResource(new org.semanticweb.yars.nx.Resource(statement.getPredicate().stringValue())),
+                    quints.add(new Quad(new NodeResource(new Resource(statement.getSubject().stringValue())),
+                            new NodeResource(new Resource(statement.getPredicate().stringValue())),
                             new NodeResource(new Resource(statement.getObject().stringValue())),
                             new NodeResource(new Resource(statement.getContext().stringValue()))));
                 }
