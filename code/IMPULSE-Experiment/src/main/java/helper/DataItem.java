@@ -1,60 +1,62 @@
 package helper;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.net.URISyntaxException;
 import java.util.*;
 
 public class DataItem {
+    private static final Logger logger = LogManager.getLogger(DataItem.class.getSimpleName());
+
     public enum InputType {
         MOVING, ZBW
     }
 
+    /**
+     * parse the ZBW data format to fill the fields of a data item.
+     *
+     * @param sourceMap
+     * @param id
+     */
     public void parseZBW(Map<String, Object> sourceMap, String id) {
         _id = id;
         _title = (String) sourceMap.get("title");
         ArrayList<String> tmpAbstract = (ArrayList<String>) sourceMap.get("abstract");
         if (tmpAbstract != null) {
             if (tmpAbstract.size() > 1)
-                System.out.println("Long abstract: " + id);
+                logger.warn("Long abstract: " + id);
 
             _abstract = tmpAbstract.get(0);
         }
 
         _authorList = new HashSet<>();
-
-        List<HashMap> authorList = (List) sourceMap.get("metadata_persons");
+        List<HashMap> authorList = (List) sourceMap.get("creator_personal");
         if (authorList != null)
-            authorList.forEach(o -> _authorList.add(new
+            authorList.forEach(o -> _authorList.add(new Person((String) o.get("name"))));
 
-                    Person((String) o.
 
-                    get("rawName"))));
-
+        _keywords = new HashSet<>();
+        ArrayList<String> keywordList = (ArrayList<String>) sourceMap.get("subject_byAuthor");
+        if (keywordList != null)
+            keywordList.forEach(o -> _keywords.add(Utils.normalizeStrings(o)));
 
         _concepts = new HashSet<>();
-        ArrayList<String> conceptList = (ArrayList<String>) sourceMap.get("subject_byAuthor");
-//        List<String> conceptList = new ArrayList<String>(Arrays.asList(concepts.substring(1, concepts.length() - 1).split(", ")));
+        ArrayList<String> conceptList = (ArrayList<String>) sourceMap.get("subject");
         if (conceptList != null)
-            conceptList.forEach(o ->
+            conceptList.forEach(o -> _concepts.add(new Concept("", Utils.normalizeStrings(o))));
 
-            {
-                _concepts.add(new Concept("", Utils.normalizeStrings(o)));
-            });
+
         _sourceURLs = new HashSet<>();
         _sourceURLs.add("zbw.eu");
-//        if (sourceMap.get("source_name") != null) {
-//            System.out.println(sourceMap.get("source_name"));
-////            List<String> sourceURIs = (List) sourceMap.get("sourceURLs");
-////            for (String sourceURI : sourceURIs) {
-////                try {
-////                    _sourceURLs.add(Utils.normalizeURL(sourceURI));
-////                } catch (URISyntaxException e) {
-////                    e.printStackTrace();
-////                    System.exit(0);
-////                }
-////            }
-//        }
     }
 
+    /**
+     * parse the MOVING data format to fill the fields of a data item.
+     *
+     * @param sourceMap
+     * @param id
+     */
     public void parseMOVING(Map<String, Object> sourceMap, String id) {
         if (sourceMap == null)
             return;
@@ -63,11 +65,19 @@ public class DataItem {
         _title = (String) sourceMap.get("title");
         _abstract = (String) sourceMap.get("abstract");
 
-        _authorList = new HashSet<>();
 
-        List<HashMap> authorList = (List) sourceMap.get("creator_personal");
+        _authorList = new HashSet<>();
+        List<HashMap> authorList = (List) sourceMap.get("metadata_persons");
         if (authorList != null)
-            authorList.forEach(o -> _authorList.add(new Person((String) o.get("name"))));
+            authorList.forEach(o -> {
+                List<String> roles = (List<String>) o.get("roles");
+                if (roles == null) {
+                    logger.debug("No role in doc: " + id);
+                    //default, assume its author
+                    _authorList.add(new Person(Utils.normalizeStrings((String) o.get("rawName"))));
+                } else if (roles.contains("author"))
+                    _authorList.add(new Person(Utils.normalizeStrings((String) o.get("rawName"))));
+            });
 
 
         _concepts = new HashSet<>();
@@ -81,20 +91,29 @@ public class DataItem {
                 }
             });
 
+        _keywords = new HashSet<>();
+        List<String> keywordList = (List) sourceMap.get("keywords");
+        if (keywordList != null)
+            keywordList.forEach(k -> _keywords.add(Utils.normalizeStrings(k)));
+
+        _sourceURLs = new HashSet<>();
+        List<String> sourceURIs = (List) sourceMap.get("sourceURLs");
         if (sourceMap.get("sourceURLs") != null) {
-            List<String> sourceURIs = (List) sourceMap.get("sourceURLs");
             for (String sourceURI : sourceURIs) {
                 try {
                     _sourceURLs.add(Utils.normalizeURL(sourceURI));
                 } catch (URISyntaxException e) {
                     e.printStackTrace();
-                    System.exit(0);
                 }
             }
         }
-
     }
 
+    /**
+     * Get a json object representation in the MOVING data format.
+     *
+     * @return
+     */
     public Map<String, Object> reverseParseMOVING() {
 
         Map<String, Object> document = new HashMap<>();
@@ -113,11 +132,8 @@ public class DataItem {
 
         document.put("metadata_persons", authorList);
 
-        document.put("sourceURLs", _sourceURLs);
-
 
         List<HashMap> conceptList = new LinkedList<>();
-
         _concepts.forEach(concept -> {
             HashMap<String, Object> conceptMap = new HashMap<>();
             conceptMap.put("URL", concept._URL);
@@ -126,12 +142,21 @@ public class DataItem {
         });
         document.put("concepts", conceptList);
 
+        List<String> keywordList = new LinkedList<>();
+        _keywords.forEach(keywords -> keywordList.add(keywords));
+        document.put("keywords", keywordList);
+
+        document.put("sourceURLs", _sourceURLs);
         return document;
     }
 
 
+    /**
+     * Get a json object representation in the ZBW data format.
+     *
+     * @return
+     */
     public Map<String, Object> reverseParseZBW() {
-
         Map<String, Object> document = new HashMap<>();
 
         document.put("title", _title);
@@ -139,7 +164,6 @@ public class DataItem {
             document.put("abstract", _abstract);
 
         List<HashMap> authorList = new LinkedList<>();
-
         _authorList.forEach(author -> {
             HashMap<String, Object> authorMap = new HashMap<>();
             authorMap.put("name", author._rawName);
@@ -148,31 +172,33 @@ public class DataItem {
 
         document.put("creator_personal", authorList);
 
-        document.put("sourceURLs", _sourceURLs);
-
 
         List<HashMap> conceptList = new LinkedList<>();
-
         _concepts.forEach(concept -> {
             HashMap<String, Object> conceptMap = new HashMap<>();
             conceptMap.put("URL", concept._URL);
             conceptMap.put("label", concept._label);
             conceptList.add(conceptMap);
         });
-        document.put("concepts", conceptList);
+        document.put("subject", conceptList);
 
+        List<String> keywordList = new LinkedList<>();
+        _keywords.forEach(keywords -> keywordList.add(keywords));
+        document.put("subject_byAuthor", keywordList);
+
+        document.put("sourceURLs", _sourceURLs);
         return document;
     }
 
 
     //////////////////////////
-    public String _id = "";
-    public String _title = "";
-    public Set<Person> _authorList = new HashSet<>();
+    public String _id;
+    public String _title;
+    public Set<Person> _authorList;
     public String _abstract;
     public Set<String> _keywords;
     public Set<Concept> _concepts;
-    public Set<String> _sourceURLs = new HashSet<>();
+    public Set<String> _sourceURLs;
 
 
     public void merge(DataItem otherItem) {
@@ -254,6 +280,5 @@ public class DataItem {
         public Person(String rawName) {
             this._rawName = rawName;
         }
-
     }
 }

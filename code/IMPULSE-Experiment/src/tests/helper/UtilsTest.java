@@ -59,10 +59,10 @@ public class UtilsTest extends TestCase {
                 }
         };
 
-//        for(String[] title : sameTitles){
-//            assertTrue(Utils.compareTitles(title[0], title[1]));
-//            assertTrue(Utils.compareTitles(title[1], title[0]));
-//        }
+        for(String[] title : sameTitles){
+            assertTrue(Utils.compareTitles(title[0], title[1]));
+            assertTrue(Utils.compareTitles(title[1], title[0]));
+        }
 
         for (String[] title : differentTitles) {
             assertFalse(Utils.compareTitles(title[0], title[1]));

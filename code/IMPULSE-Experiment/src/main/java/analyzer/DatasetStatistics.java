@@ -6,12 +6,12 @@ import helper.Utils;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.*;
 
-import static helper.Utils.extractPLD;
-import static helper.Utils.normalizeURL;
+import static helper.Utils.*;
 
 /**
  * Get Information about a single generated dataset.
@@ -40,7 +40,7 @@ public class DatasetStatistics {
         this.inputType = inputType;
     }
 
-    public void runStatistics() throws IOException {
+    public void runStatistics(BufferedWriter writer) throws IOException {
         //scroll through the whole index
         SearchHits hits = client.search(null, 100);
         while (hits.getHits().length != 0) {
@@ -102,14 +102,17 @@ public class DatasetStatistics {
             //get next set of items
             hits = client.scroll();
         }
-        System.out.println("_______________________________________");
-        System.out.println(client.getIndex());
-        System.out.println("Total Docs: " + counterDoc);
-        System.out.println("Docs with Abstracts: " + counterAbstract);
-        System.out.println("Docs with Concepts: " + counterConcepts);
-        System.out.println("Docs with Keywords: " + counterKeywords);
-        System.out.println("Docs complete: " + counterKeywordsConceptsAbstract);
-        System.out.println("---------------------------------------");
+
+        writer.write("Total Docs," + counterDoc);
+        writer.newLine();
+        writer.write("Docs with Abstracts," + counterAbstract);
+        writer.newLine();
+        writer.write("Docs with Concepts," + counterConcepts);
+        writer.newLine();
+        writer.write("Docs with Keywords," + counterKeywords);
+        writer.newLine();
+        writer.write("Docs complete," + counterKeywordsConceptsAbstract);
+        writer.newLine();
 
         double avgConcepts = 0;
         double avgKeywords = 0;
@@ -128,50 +131,50 @@ public class DatasetStatistics {
             avgKeywords += integer;
 
 
-        if (avgConcept.size() != 0)
-            System.out.println("Avg. Concepts/Doc: " + (avgConcepts / avgConcept.size()) + " (" + standardDeviationConcepts + ")");
-        else
-            System.out.println("Avg. Concepts/Doc: 0 (0)");
+        if (avgConcept.size() != 0) {
+            writer.write("Avg. Concepts/Doc," + (avgConcepts / avgConcept.size()));
+            writer.newLine();
+            writer.write("SD Concepts/Doc," + standardDeviationConcepts);
+            writer.newLine();
+        }
+        else{
+            writer.write("Avg. Concepts/Doc,0");
+            writer.newLine();
+            writer.write("SD Concepts/Doc,0");
+            writer.newLine();
+        }
 
+        if (avgKeyword.size() != 0) {
+            writer.write("Avg. Keywords/Doc," + (avgKeywords / avgKeyword.size()));
+            writer.newLine();
+            writer.write("SD Keywords/Doc," + standardDeviationKeywords);
+            writer.newLine();
+        }
+        else{
+            writer.write("Avg. Keywords/Doc,0");
+            writer.newLine();
+            writer.write("SD Keywords/Doc,0");
+            writer.newLine();
+        }
 
-        if (avgKeyword.size() != 0)
-            System.out.println("Avg. Keywords/Doc: " + (avgKeywords / avgKeyword.size()) + " (" + standardDeviationKeywords + ")");
-        else
-            System.out.println("Avg. Keywords/Doc: 0 (0)");
-
-        System.out.println("_______________________________________");
-        System.out.println("Number of PLDs: " + documentCountPerPayLevelDomain.keySet().size());
-
+        writer.write("Number of PLDs," + documentCountPerPayLevelDomain.keySet().size());
+        writer.newLine();
 
         Map<String, Integer> sortedPLDs = Utils.sortByValue(documentCountPerPayLevelDomain);
         int c = 0;
         Iterator<Map.Entry<String, Integer>> iterator = sortedPLDs.entrySet().iterator();
         while (c < TOP_K_PLDs && iterator.hasNext()) {
             Map.Entry<String, Integer> pld = iterator.next();
-            System.out.println(pld.getKey() + ": " + pld.getValue() + " (" + Math.round((double) pld.getValue() / (double) counterDoc * 100) + "%)");
+            writer.write(pld.getKey() + "," + pld.getValue());
+            writer.newLine();
+            writer.write(pld.getKey() +"," + Math.round((double) pld.getValue() / (double) counterDoc * 100) + "%");
+            writer.newLine();
             c++;
         }
+        writer.close();
     }
 
 
-    //----------------------------------------------------//
-    // ----- HELPER
-
-    public static double calculateSD(List<Integer> numArray) {
-        double sum = 0.0, standardDeviation = 0.0;
-        int length = numArray.size();
-
-        for (double num : numArray)
-            sum += num;
-
-
-        double mean = sum / length;
-
-        for (double num : numArray)
-            standardDeviation += Math.pow(num - mean, 2);
-
-        return Math.sqrt(standardDeviation / length);
-    }
 
 
 }

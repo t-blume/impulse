@@ -15,24 +15,29 @@ public class Deduplicate {
     private ElasticsearchClient client;
     private DataItem.InputType inputType;
 
+
     public Deduplicate(ElasticsearchClient client, DataItem.InputType inputType) {
         this.client = client;
         this.inputType = inputType;
     }
 
+
     /**
-     * Get all titles in dataset.
-     * Query all items with the same title.
+     * Get all titles in dataset (index one).
+     * Query all items with the same title in (index two).
      * Check all items with same title for possible duplicate.
      *
      * @throws IOException
      */
-    public void findAllDuplicates() throws IOException {
+    public int[] findAllDuplicates() throws IOException {
+        int[] stats = new int[]{0, 0, 0};
+
         Set<String> allTitles = new HashSet<>();
         SearchHits hits = client.search(null, 100);
         while (hits.getHits().length != 0) {
             for (SearchHit hit : hits.getHits()) {
                 Map<String, Object> source = hit.getSourceAsMap();
+                //TODO currently works for MOVING and ZBW
                 if (source.get("title") != null)
                     allTitles.add((String) source.get("title"));
             }
@@ -40,7 +45,7 @@ public class Deduplicate {
             hits = client.scroll();
         }
 
-        System.out.println(allTitles.size());
+        stats[0] = allTitles.size();
         for (String title : allTitles) {
             //System.out.println("title: " + title);
             hits = client.search(title, 100);
@@ -48,22 +53,26 @@ public class Deduplicate {
             while (hits.getHits().length != 0) {
                 for (SearchHit hit : hits.getHits()) {
                     DataItem dataItem = new DataItem();
-                    if(inputType == DataItem.InputType.MOVING)
+                    if (inputType == DataItem.InputType.MOVING)
                         dataItem.parseMOVING(hit.getSourceAsMap(), hit.getId());
-                    else if(inputType == DataItem.InputType.ZBW)
+                    else if (inputType == DataItem.InputType.ZBW)
                         dataItem.parseZBW(hit.getSourceAsMap(), hit.getId());
                     documentSubset.add(dataItem);
                 }
                 //get next set of items
                 hits = client.scroll();
             }
-            handleDuplicates(documentSubset);
+            int[] tmpStats = handleDuplicates(documentSubset);
+            stats[1] += tmpStats[0];
+            stats[2] += tmpStats[1];
             client.releaseScrollContext();
         }
+        return stats;
     }
 
 
-    private void handleDuplicates(List<DataItem> documentList) {
+    private int[] handleDuplicates(List<DataItem> documentList) {
+        int[] stats = new int[]{0,0};
         Set<DataItem> duplicates = new HashSet<>();
         Map<String, DataItem> mergedItems = new HashMap<>();
         for (int i = 0; i < documentList.size(); i++) {
@@ -107,11 +116,12 @@ public class Deduplicate {
             }
         }
         if (duplicates.size() > 0 || mergedItems.size() > 0) {
-            System.out.println("New iteration:");
+//            System.out.println("New iteration:");
             duplicates.forEach(item -> {
                 try {
-                    System.out.println("deleting " + item);
-                    client.delete(item._id);
+//                    System.out.println("deleting " + item);
+                    if(client.delete(item._id))
+                        stats[0]++;
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -119,19 +129,20 @@ public class Deduplicate {
 
             mergedItems.forEach((key, item) -> {
                 try {
-                    System.out.println("Updating " + item);
-                    if(inputType == DataItem.InputType.MOVING)
+//                    System.out.println("Updating " + item);
+                    if (inputType == DataItem.InputType.MOVING)
                         client.update(item._id, item.reverseParseMOVING());
-                    else if(inputType == DataItem.InputType.ZBW)
+                    else if (inputType == DataItem.InputType.ZBW)
                         client.update(item._id, item.reverseParseZBW());
 
+                    stats[1]++;
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             });
-            System.out.println("____________________________________");
+//            System.out.println("____________________________________");
         }
-
+        return stats;
     }
 
 

@@ -1,6 +1,8 @@
 package connector;
 
 import org.apache.http.HttpHost;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -38,6 +40,8 @@ import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
  * Simple Uploader class that functions as uploading interface to Elasticsearch.
  */
 public class ElasticsearchClient {
+    private static final Logger logger = LogManager.getLogger(ElasticsearchClient.class.getSimpleName());
+
     private String index;
     private String type;
     private RestHighLevelClient client;
@@ -87,14 +91,15 @@ public class ElasticsearchClient {
         while ((line = br.readLine()) != null) {
             try {
                 JSONObject jsonObject = (JSONObject) parser.parse(line);
-                jsonObjects.add(jsonObject);
+                if (jsonObject.containsKey("title"))
+                    jsonObjects.add(jsonObject);
             } catch (ParseException e) {
                 //increase error counter
                 result[1]++;
             }
 
             if (jsonObjects.size() >= bulkSize) {
-                System.out.println("Sending " + jsonObjects.size() + " objects...");
+                logger.info("Sending " + jsonObjects.size() + " objects...");
                 int[] tmpResult = bulkUpload(jsonObjects);
                 jsonObjects = new LinkedList<>();
                 result[0] += tmpResult[0];
@@ -103,12 +108,12 @@ public class ElasticsearchClient {
             counter++;
         }
         if (jsonObjects.size() >= 0) {
-            System.out.println("Sending last " + jsonObjects.size() + " objects...");
+            logger.info("Sending last " + jsonObjects.size() + " objects...");
             int[] tmpResult = bulkUpload(jsonObjects);
             result[0] += tmpResult[0];
             result[1] += tmpResult[1];
         }
-        System.out.println("Counter: " + counter);
+        logger.info("Uploaded a total of " + counter + " documents.");
         return result;
     }
 
@@ -146,7 +151,6 @@ public class ElasticsearchClient {
     public SearchHits search(String title, int size) throws IOException {
         SearchRequest searchRequest = new SearchRequest(index);
 
-        //TODO FIXME Title query does not work properly
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         if (title != null)
             searchSourceBuilder.query(QueryBuilders.matchPhraseQuery("title", title));  //.moreLikeThisQuery(new String[]{"title", title})
@@ -172,7 +176,7 @@ public class ElasticsearchClient {
             return searchScrollResponse.getHits();
 
         } else {
-            System.err.println("No search context");
+            logger.error("No search context!");
             return null;
         }
     }
@@ -192,13 +196,11 @@ public class ElasticsearchClient {
     public boolean delete(String id) throws IOException {
         DeleteRequest deleteRequest = new DeleteRequest(index, id);
         DeleteResponse deleteResponse = client.delete(deleteRequest, RequestOptions.DEFAULT);
-        System.out.println(deleteResponse);
         return deleteResponse.getShardInfo().getSuccessful() > 0;
     }
 
 
     public void update(String id, Map<String, Object> jsonMap) throws IOException {
-
         UpdateRequest request = new UpdateRequest(index, id)
                 .doc(jsonMap);
         client.update(request, RequestOptions.DEFAULT);

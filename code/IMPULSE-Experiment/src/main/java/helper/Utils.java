@@ -2,6 +2,7 @@ package helper;
 
 import org.apache.lucene.search.spell.LevenshteinDistance;
 
+import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
@@ -9,6 +10,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Utils {
+
+    public static File createFile(String filepath){
+        File targetFile = new File(filepath);
+        File parent = targetFile.getParentFile();
+        if (!parent.exists() && !parent.mkdirs()) {
+            throw new IllegalStateException("Couldn't create dir: " + parent);
+        }
+        return targetFile;
+    }
+
     public static <K, V extends Comparable<? super V>> Map<K, V> sortByValue(Map<K, V> map) {
         List<Map.Entry<K, V>> list = new ArrayList<>(map.entrySet());
         list.sort(Map.Entry.comparingByValue());
@@ -48,6 +59,15 @@ public class Utils {
     public static boolean compareTitles(String title1, String title2) {
         if (title1 == null && title2 == null)
             return true;
+
+        if (title1 == null || title2 == null) {
+            System.out.println("Title1: " + title1);
+            System.out.println("Title2: " + title2);
+
+            return false;
+        }
+
+
 
         //numbers need to be exactly the same in the title, years matter!
         //e.g. "The Children (Scotland) Act 1995" vs. "The Children (Scotland) Act 1999"
@@ -118,6 +138,24 @@ public class Utils {
             return parsedUri.toString();
 
         return pld;
+    }
+
+
+
+    public static double calculateSD(List<Integer> numArray) {
+        double sum = 0.0, standardDeviation = 0.0;
+        int length = numArray.size();
+
+        for (double num : numArray)
+            sum += num;
+
+
+        double mean = sum / length;
+
+        for (double num : numArray)
+            standardDeviation += Math.pow(num - mean, 2);
+
+        return Math.sqrt(standardDeviation / length);
     }
 
 }
