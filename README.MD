@@ -3,17 +3,21 @@
 
 ### Usage
 ```
-usage: [-f <filename[.gz]>] [-m <mappingfile[.json]>] [-mi] [-dCM] [-ds <contextURIs[.csv]>] [-pld]
-[-o <outputDirectory>] [-e <ElasticsearchIndex>]
+usage:   [-c <int>] [-ds <arg>] -f <file> [-fb] [-i] [-if <inputFilter>] -m
+       <mapping> -o <folder> [-pld]
+Required options: f, m, [-o output folder]
+ -c,--cachesize <int>              instances stored in main memory
+ -ds,--datasources <arg>           location of datasource URIs (query LODatio if
+                                   not provided)
+ -f,--files <file>                 read from file(s)
+ -fb,--fixBlankNodes               try to fix Blank Nodes
+ -i,--inference                    activate inferencing
+ -if,--inputFilter <inputFilter>   regex pattern to filter filenames
+ -m,--mapping <mapping>            location of mapping file
+ -o,--output <folder>              output folder
+ -pld,--usePLD                     harvest the complete pay-level domain (also
+                                   exports simple harvesting)
 
-  [-f <filename[.gz]>]            Location and name of the inputfile, local dataset in N-triple format
-  [-m <mappingfile[.json]>]       Location and name of the mappingfile
-  [-mi]                           Use mapping inferencing
-  [-dCM]                          Download the Cachemisses in runtime
-  [-ds <contextURIs[.csv]>]       Location and name of the contextURI-list, if not set the queries from the mappingfile a send to Lodatio
-  [-pld]                          Use PLDFilter, if set the Framework is going to extract the contexts too.
-  [-o <outputDirectory>]          Name of NQuad file with output
-  [-e <ElasticsearchIndex>]       Name of Elasticsearch index to export output
 ```
 
 #### Quickstart with sample-data
