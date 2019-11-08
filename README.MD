@@ -1,10 +1,7 @@
 # IMPULSE
 ## Integrate Public Metadata Underneath professional Library SErvices
 
-### Quickstart
-
-IMPULSE is a command line application.
-
+### Usage
 ```
 usage: [-f <filename[.gz]>] [-m <mappingfile[.json]>] [-mi] [-dCM] [-ds <contextURIs[.csv]>] [-pld]
 [-o <outputDirectory>] [-e <ElasticsearchIndex>]
@@ -20,8 +17,6 @@ usage: [-f <filename[.gz]>] [-m <mappingfile[.json]>] [-mi] [-dCM] [-ds <context
 ```
 
 #### Quickstart with sample-data
-Install redis: https://redis.io/topics/quickstart
-
 ```
 $ java -jar impulse.jar -f testresources/sample-rdf-data.nt.gz -m testresources/sample-mapping.json -o testresources -ds testresources/sample-datasourceURIs.csv -fb -c 5000
 
@@ -29,40 +24,44 @@ $ java -jar impulse.jar -f testresources/sample-rdf-data.nt.gz -m testresources/
 #### How to reproduce the experiments?
 
   1. Download the BTC 2014 dataset from http://km.aifb.kit.edu/projects/btc-2014/
-  2. Use the mapping files in the mappingfiles directory
-  3. The seedlist will be downloaded by querying http://lodatio.informatik.uni-kiel.de/. This step can be skipped, when the corresponding seedlist from the Zenodo repository is provided via the -ds command
+  3. Query the schema-level index available at http://lodatio.informatik.uni-kiel.de/. Alternatively, use the data source URIs provided.
+  4. Generate the dataset containing bibliographic metadata only for each query (mapping):
+  `java -jar IMPULSE.jar -f path/to/BTC14/ -m mappings/base_mappings/dcterms-mapping.json -ds contexts/base/dcterms/ -o base/dcterms/ -pld -fb -c 10000`
+  5. Upload the generated `.json` file to Elasticsearch:
+  `java -jar IMPULSE-Experiment.jar -i btc14-base-dcterms base/dcterms/data.json -o experiment1`
+  6. Run the deduplication repeatedly until no duplicates can be found:
+  `java -jar IMPULSE-Experiment.jar -d btc14-base-dcterms MOVING -o experiment1`
+  7. Run the dataset analysis to get statistics about the remaining documents:
+  `java -jar IMPULSE-Experiment.jar -a btc14-base-dcterms MOVING -o experiment1`
+  8. Repeat steps 4 to 7 for all mappings. Repeat step 5 to 7 for internal dataset, e.g., our ZBW Econonmics dataset.
+  9. Link records from two different indices to get the results for the document enrichment experiment:
+  `java -jar IMPULSE-Experiment.jar -l btc14-base-dcterms MOVING zbw-economics ZBW -o experiment1`
 
- #### Technical details of implementation
+
+It is recommended to increase the JVM heap space with, e.g., `-Xmx500G` to use all available resources. To exploit all heap space, adjust the cache size accordingly. Rule of thumb: ~3000 instances per gigabyte.  
+
+#### Technical details of implementation
 * Main
    * The framework is implemented as a command line interface.  
 * Input
-   * In the "input" package, the data set is transferred in the internal data format.  Furthermore, the RDF instances for the FiFo    instance cache are created.    
+   * In the "input" package, the data set is transposed to the internal data format. Furthermore, the RDF instances are created and added to the instance cache. If the cache limit of instances is reached, additional instances are stored in an disk-cache. instances in memory are stored ind an LRU cache. Instances are processed in a FiFo queue.     
 * Processing
-   * All data sources are first added to a pipeline. These are then filtered one after the other by the corresponding filter. With the context filter, all data sources specified by the seed list are filtered out. With the PLD filter, all data sources belonging to a pay-level domain of the seed list are filtered accordingly.
-   * Once prepossecing is complete, the data sources are passed from the harvester to the MOVINGParser. In the MOVINGParser, the information is assigned to the correct attributes according to the mapping file. For different data formats, a new parser and a corresponding mapping files needs to be created.
+   * All data is subject to preprocessing. Invalid URIs, blank nodes, and literals are removed. If the option `-fb` is used, a set of rules is applied to fix them. If they are unsucessful, they are removed anyways.
+   * Once preprocessing is complete, the data sources are passed from the harvester to the MOVINGParser. In the MOVINGParser, the RDF instances are mapped to internal `DataItems` using the provided mapping file. For different data formats, new parser and corresponding mapping files need to be defined.
 * Output
-   * After the parsing is complete, the data items are exported. The data is exported as a JSON object. They can be exported to disk or directly to a previously specified Elasticsearch index.
+   * After the parsing is complete, the data items are exported. The data is exported as a JSON object. They can be exported to disk or directly to a previously specified Elasticsearch index. When exported to disk, a text file where each line contains one valid JSON object is created.
 
 
 
- #### Mapping File
-This mapping file defines which information is used for which attribute. In addition, optional attributes can be defined by the user, e.g. http://purl.org/dc/terms/language.
-The mapping file also provides the queries. In addition to that you can make type restiction in the mapping file. So only documents which fits to the type will be processed. Furthermore, you can define mandatory properties.
+#### Mapping File
+This mapping file defines which information is used for which attribute.
+The mapping file also includes the queries that are send to LODatio.
+We defined SPARQL queries to find data sources containing bibliographic metadata. In our experiments we used queries, that are based on three established vocabularies, Bibliographic Ontology [BIBO](http://bibliontology.com/), Semantic Web for Research Communities [SWRC](http://ontoware.org/swrc) and DCMI Metadata Terms [DCTerms](http://dublincore.org/documents/dcmi-terms/).
 
-
-
-#### Queries
-First of all you need to define SPARQL queries to find bibliographic metadata. In our experiments we used queries, that are based on three established vocabularies, Bibliographic Ontology [BIBO](http://bibliontology.com/), Semantic Web for Research Communities [SWRC](http://ontoware.org/swrc) and DCMI Metadata Terms [DCTerms](http://dublincore.org/documents/dcmi-terms/).
-As a Second step the framework harvests the set of datasources that are returned from each query.
 
 #### Experiment datasets
 The results from our expriments can be found in zendodo
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2553811.svg)](https://doi.org/10.5281/zenodo.2553811)
-
-
-### About
-
-
 
 
 #### Acknowledgments
