@@ -36,7 +36,7 @@ public class InstanceAggregator implements IQuintListener {
     @Override
     public void microBatch() {
         //flushes all instances out of the window, clears window afterwards to safe space
-        window.flush(true);
+        window.flush();
     }
 
     protected IInstanceElement createInstance(IQuint quint) {

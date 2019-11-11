@@ -11,8 +11,10 @@ import main.java.common.implementation.TypedResource;
 import main.java.common.interfaces.IInstanceElement;
 import main.java.common.interfaces.IQuint;
 import main.java.common.interfaces.IResource;
+import main.java.processing.implementation.Harvester;
 import main.java.processing.interfaces.IElementCache;
 import main.java.utils.DataCleansing;
+import main.java.utils.MainUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.semanticweb.yars.nx.BNode;
@@ -32,10 +34,9 @@ public class MOVINGParser {
     private static final Logger logger = LogManager.getLogger(MOVINGParser.class.getSimpleName());
     private static final DataCleansing dataCleansing = new DataCleansing();
 
-
     public static HashSet<String> newData;
 
-    private IElementCache<IInstanceElement> rdfInstanceCache;
+    private Harvester harvester;
     private Mapping mapping;
 
     private List<String[]> mandatoryPredicates;
@@ -50,10 +51,7 @@ public class MOVINGParser {
     private int missingConcept;
 
 
-    private boolean cacheMiss = false;
-
-    public MOVINGParser(IElementCache<IInstanceElement> rdfInstanceCache, Mapping mapping) {
-        this.rdfInstanceCache = rdfInstanceCache;
+    public MOVINGParser(Mapping mapping) {
         this.mapping = mapping;
 
         setMissingConcept(0);
@@ -83,10 +81,12 @@ public class MOVINGParser {
         types.toArray(tmps);
         mandatoryTypes = new LinkedList<>();
         mandatoryTypes.add(tmps);
-
         newData = new HashSet<>();
     }
 
+    public void setHarvester(Harvester harvester){
+        this.harvester = harvester;
+    }
 
     public DataItem convertInstance2JSON(IInstanceElement instanceElement) {
         DataItem dataItem = new DataItem();
@@ -94,7 +94,6 @@ public class MOVINGParser {
 
         dataItem.setSource(DataItem.Source.BTC_2014);
         dataItem.setDocType(DataItem.DocType.DOCUMENT_RDF);
-
         int size = instanceElement.getOutgoingQuints().size();
 
         for (IQuint quint : instanceElement.getOutgoingQuints()) {
@@ -108,7 +107,6 @@ public class MOVINGParser {
                 logger.warn(e.getMessage());
             }
             try {
-
                 URI property = new URI(editStrings(quint.getPredicate().toString()));
                 String object = quint.getObject().toString();
                 String[] alternatives;
@@ -212,11 +210,10 @@ public class MOVINGParser {
                 String[] parts = keywordString.split(" ");
                 for (int i = 0; i < parts.length; i++)
                     dataItem.getKeywords().add(dataCleansing.cleanse(parts[i]));
-
             } else {
                 //Second Case if object is and URI get URI from InstanceCache and Parse Label
                 IResource targetInstanceLocator = new TypedResource(quint.getObject(), RDFInstance.RESOURCE_TYPE);
-                IInstanceElement objectElement = rdfInstanceCache.get(targetInstanceLocator);
+                IInstanceElement objectElement = harvester.getInstance(targetInstanceLocator);
                 if (objectElement != null) {
                     Concept concept = new Concept();
                     try {
@@ -225,7 +222,6 @@ public class MOVINGParser {
                     } catch (URISyntaxException e) {
                         logger.warn(e.getMessage());
                     }
-
                     for (IQuint objectQuint : objectElement.getOutgoingQuints()) {
                         URI objectProperty = new URI(editStrings(objectQuint.getPredicate().toString()));
                         String[] alternatives = convertJSONArray2StringArray(
@@ -239,7 +235,6 @@ public class MOVINGParser {
                     dataItem.getConcepts().add(concept);
                 } else {
                     //Third Case, Resource is not in Cache. Download Resource
-                    cacheMiss = true;
                     missingConcept++;
                 }
             }
@@ -255,7 +250,7 @@ public class MOVINGParser {
                 dataItem.setMetadataVenue(venue);
             } else {
                 IResource targetInstanceLocator = new TypedResource(quint.getObject(), RDFInstance.RESOURCE_TYPE);
-                IInstanceElement objectElement = rdfInstanceCache.get(targetInstanceLocator);
+                IInstanceElement objectElement = harvester.getInstance(targetInstanceLocator);
 
                 if (objectElement != null) {
                     MetadataVenue venue = new MetadataVenue();
@@ -298,7 +293,6 @@ public class MOVINGParser {
                     }
                     dataItem.setMetadataVenue(venue);
                 } else {
-                    cacheMiss = true;
                     missingVenue++;
                 }
             }
@@ -306,7 +300,7 @@ public class MOVINGParser {
     }
 
 
-    private void parseComplexPerson(IQuint quint, DataItem dataItem) throws URISyntaxException {
+    private void parseComplexPerson(IQuint quint, DataItem dataItem) {
         HashSet<MetadataPerson> metadataPeople = new HashSet<>();
         if (quint.getObject() instanceof NodeResource) {
             NodeResource nr = (NodeResource) quint.getObject();
@@ -321,13 +315,13 @@ public class MOVINGParser {
                 //Blanknode handling
             } else if (nr.getNode() instanceof BNode) {
                 IResource targetInstanceLocator = new TypedResource(quint.getObject(), RDFInstance.RESOURCE_TYPE);
-                IInstanceElement objectElement = rdfInstanceCache.get(targetInstanceLocator);
+                IInstanceElement objectElement = harvester.getInstance(targetInstanceLocator);
                 boolean organisation = quint.getObject().toString().contains("organization");
                 try {
-                    rdfInstanceCache.get(objectElement.getLocator()).getOutgoingQuints().forEach(x -> {
+                    harvester.getInstance(objectElement.getLocator()).getOutgoingQuints().forEach(x -> {
                         if (x.getObject() instanceof NodeResource) {
                             IResource targetInstanceLocator2 = new TypedResource(x.getObject(), RDFInstance.RESOURCE_TYPE);
-                            IInstanceElement objectElement2 = rdfInstanceCache.get(targetInstanceLocator2);
+                            IInstanceElement objectElement2 = harvester.getInstance(targetInstanceLocator2);
                             if (objectElement2 != null) {
                                 for (IQuint objectQuint : objectElement2.getOutgoingQuints()) {
                                     MetadataPerson metadataPerson = extractPersons(objectQuint, organisation);
@@ -344,8 +338,7 @@ public class MOVINGParser {
             } else {
                 //complex case, the object is again a URI with properties etc.
                 IResource targetInstanceLocator = new TypedResource(quint.getObject(), RDFInstance.RESOURCE_TYPE);
-                IInstanceElement objectElement = rdfInstanceCache.get(targetInstanceLocator);
-
+                IInstanceElement objectElement = harvester.getInstance(targetInstanceLocator);
                 if (objectElement != null) {
                     //FIXME: quick hax
                     boolean organisation = quint.getObject().toString().contains("organization");
@@ -399,9 +392,8 @@ public class MOVINGParser {
                     for (IQuint objectQuint : objectElement.getOutgoingQuints()) {
                         //Check if Quintobject is an URI
                         if (objectQuint.getObject().toString().startsWith("http")) {
-
                             IResource targetInstanceLocator2 = new TypedResource(objectQuint.getObject(), RDFInstance.RESOURCE_TYPE);
-                            IInstanceElement objectElement2 = rdfInstanceCache.get(targetInstanceLocator2);
+                            IInstanceElement objectElement2 = harvester.getInstance(targetInstanceLocator2);
                             if (objectElement2 != null) {
                                 for (IQuint objectQuint2 : objectElement2.getOutgoingQuints()) {
 
@@ -417,7 +409,6 @@ public class MOVINGParser {
                         }
                     }
                 } else {
-                    cacheMiss = true;
                     missingPerson++;
                 }
             }
@@ -429,7 +420,6 @@ public class MOVINGParser {
     //////////////////////////////////////////////////////////////////
 
     private MetadataPerson extractPersons(IQuint objectQuint, boolean organisation) {
-
         MetadataPerson metadataPerson = new MetadataPerson();
         MetadataOrganisation metadataOrganisation = new MetadataOrganisation();
 

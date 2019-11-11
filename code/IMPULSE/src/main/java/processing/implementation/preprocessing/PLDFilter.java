@@ -15,7 +15,7 @@ import java.util.Set;
 public class PLDFilter implements IQuintProcessor {
     private static final Logger logger = LogManager.getLogger(PLDFilter.class.getSimpleName());
 
-    private int counter = 0;
+    private long counter = 0;
 
     private Set<String> payLevelDomains;
 

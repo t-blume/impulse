@@ -108,11 +108,11 @@ public class BasicQuintPipeline implements IQuintPipeline, IQuintSourceListener 
     @Override
     public void sourceClosed() {
         logger.debug("Pre-processing is finished!");
-        for (IQuintListener l : listeners)
-            l.finished();
-
         for (IQuintProcessor p : processors)
             p.finished();
+
+        for (IQuintListener l : listeners)
+            l.finished();
 
     }
 

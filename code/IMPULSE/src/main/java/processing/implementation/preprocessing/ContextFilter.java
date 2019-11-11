@@ -15,7 +15,7 @@ import java.util.Set;
 public class ContextFilter implements IQuintProcessor {
     private static final Logger logger = LogManager.getLogger(ContextFilter.class.getSimpleName());
 
-    private int counter = 0;
+    private long counter = 0;
     private Set<String> contexts;
 
     public ContextFilter(Set<String> contexts) {

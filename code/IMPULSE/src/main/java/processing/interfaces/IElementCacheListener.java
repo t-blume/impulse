@@ -1,18 +1,17 @@
 package main.java.processing.interfaces;
 
 
-public interface IElementCacheListener<T> {
+import main.java.common.interfaces.IResource;
+import main.java.utils.LongQueue;
+
+public interface IElementCacheListener{
+
 
 	/**
-	 * Callback function for instances leaving the cache
-	 * 
-	 * @param instance
-	 *            The instance
+	 * Signals that cache is full, parsing can start
 	 */
-	void elementFlushed(T instance);
+	void startWorking(LongQueue<IResource> fifoQueue);
 
-	/**
-	 * Signals that no more instances will follow
-	 */
-	void finished();
+
+	void join() throws InterruptedException;
 }

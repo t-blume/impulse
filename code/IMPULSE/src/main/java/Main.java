@@ -5,8 +5,9 @@ import main.java.common.interfaces.IInstanceElement;
 import main.java.input.implementation.FileQuadSource;
 import main.java.input.interfaces.IQuintSource;
 import main.java.output.implementation.FileJSONSink;
-import main.java.processing.implementation.Harvester;
+import main.java.processing.implementation.ContextHarvester;
 import main.java.processing.implementation.LODatioQuery;
+import main.java.processing.implementation.PLDHarvester;
 import main.java.processing.implementation.common.DataItemBuffer;
 import main.java.processing.implementation.common.LRUFiFoInstanceCache;
 import main.java.processing.implementation.parsing.MOVINGParser;
@@ -76,7 +77,9 @@ public class Main {
         mapping.setRequired(true);
         options.addOption(mapping);
         ///////////////////////////////////////////////////////////////////
-        Option inferenceOption = new Option("i", "inference", false, "activate inferencing");
+        Option inferenceOption = new Option("i", "inference", true, "activate inferencing");
+        inferenceOption.setArgs(2);
+        inferenceOption.setArgName("<mapping> <datasources>");
         options.addOption(inferenceOption);
 
 
@@ -152,7 +155,8 @@ public class Main {
         String outputDir = null;
         Mapping mapping = null;
         HashSet<String> datasourceURIs;
-        boolean usePLDFilter = false;
+        boolean usePLDFilter = cmd.hasOption("pld");
+        boolean useInferencing = cmd.hasOption("i");
 
         int cacheSize = Integer.MAX_VALUE;
 
@@ -176,11 +180,15 @@ public class Main {
         FileFilter fileFilter = (pathname) -> (pathname != null ? pathname.toString().matches(finalRegex) : false);
 
 
+        Mapping inferencedMapping = null;
+        Set<String> inferencedDS = null;
         if (cmd.hasOption("m")) {
-            String mappingString = readFile(cmd.getOptionValue("m"));
-            mapping = new Mapping(mappingString);
+            mapping = new Mapping(readFile(cmd.getOptionValue("m")));
             if (cmd.hasOption("i")) {
-                mapping = LODatioQuery.mappingInferencing(mapping, cmd.getOptionValue("m"));
+//                inferencedMapping = LODatioQuery.mappingInferencing(mapping, cmd.getOptionValue("m"));
+                String[] innerArgs = cmd.getOptionValues("i");
+                inferencedMapping = new Mapping(readFile(innerArgs[0]));
+                inferencedDS = loadContexts(innerArgs[1]);
                 logger.debug("using inferenced mapping");
             } else
                 logger.debug("using base mapping");
@@ -215,89 +223,99 @@ public class Main {
         //source of RDF triples
         IQuintSource quintSource = null;
         if (!inputFiles.isEmpty()) {
-
             quintSource = new FileQuadSource(inputFiles, true,
                     "http://harverster.informatik.uni-kiel.de/", fileFilter);
-
         }
 
         //extract actual file name (without parent folders)
         String p = getFileName(inputFiles);
 
 
-        /*
-        Prepare always both pipelines, use pld pipeline only when option is used.
-         */
-
-        BasicQuintPipeline preProcessingPipelineContext = new BasicQuintPipeline();
-        BasicQuintPipeline preProcessingPipelinePLD = new BasicQuintPipeline();
+        BasicQuintPipeline preProcessingPipeline = new BasicQuintPipeline();
 
 
-        /*
-         * filter fix common miastakes
-         */
-        preProcessingPipelineContext.addProcessor(new FixBNodes(cmd.hasOption("fb"), "http://harverster.informatik.uni-kiel.de/"));
-        preProcessingPipelinePLD.addProcessor(new FixBNodes(cmd.hasOption("fb"), "http://harverster.informatik.uni-kiel.de/"));
-
-
-        preProcessingPipelineContext.addProcessor(new ContextFilter(datasourceURIs));
-        preProcessingPipelinePLD.addProcessor(new PLDFilter(datasourceURIs));
+        //filter fix common mistakes
+        preProcessingPipeline.addProcessor(new FixBNodes(cmd.hasOption("fb"), "http://harverster.informatik.uni-kiel.de/"));
+        //reduce the number of instances
+        if (usePLDFilter)
+            preProcessingPipeline.addProcessor(new PLDFilter(datasourceURIs));
+        else
+            preProcessingPipeline.addProcessor(new ContextFilter(datasourceURIs));
 
 
         // all quints have to pass the pre-processing pipeline
-        quintSource.registerQuintListener(preProcessingPipelineContext);
-        //when pld harvesting is used, connect PLD pipeline to quint source
-        if (usePLDFilter)
-            quintSource.registerQuintListener(preProcessingPipelinePLD);
+        quintSource.registerQuintListener(preProcessingPipeline);
 
         //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
-        IElementCache<IInstanceElement> rdfInstanceCacheContext = new LRUFiFoInstanceCache<>(cacheSize, "disk-cache_simple", cmd.hasOption("ddc"));
-        InstanceAggregator instanceAggregatorContext = new InstanceAggregator(rdfInstanceCacheContext);
-        preProcessingPipelineContext.registerQuintListener(instanceAggregatorContext);
+        IElementCache<IInstanceElement> rdfInstanceCache = new LRUFiFoInstanceCache<>(cacheSize, "disk-cache", cmd.hasOption("ddc"));
+        InstanceAggregator instanceAggregatorContext = new InstanceAggregator(rdfInstanceCache);
+        preProcessingPipeline.registerQuintListener(instanceAggregatorContext);
 
-
-        //Optional: PLD
-        IElementCache<IInstanceElement> rdfInstanceCachePLD = null;
-        if (usePLDFilter) {
-            //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
-            rdfInstanceCachePLD = new LRUFiFoInstanceCache<>(cacheSize, "disk-cache_pld", cmd.hasOption("ddc"));
-            InstanceAggregator instanceAggregatorPLD = new InstanceAggregator(rdfInstanceCachePLD);
-            preProcessingPipelinePLD.registerQuintListener(instanceAggregatorPLD);
-        }
 
         //convert RDF instances to JSON instances
-        MOVINGParser parserContext = new MOVINGParser(rdfInstanceCacheContext, mapping);
-        MOVINGParser parserPLD = null;
+        MOVINGParser parserBaseContext = new MOVINGParser(mapping);
+        MOVINGParser parserBasePLD = null;
+        MOVINGParser parserInferContext = null;
+        MOVINGParser parserInferPLD = null;
+
+        if (useInferencing)
+            parserInferContext = new MOVINGParser(inferencedMapping);
         if (usePLDFilter) {
             //convert RDF instances to JSON instances
-            parserPLD = new MOVINGParser(rdfInstanceCachePLD, mapping);
+            parserBasePLD = new MOVINGParser(mapping);
+            if (useInferencing)
+                parserInferPLD = new MOVINGParser(inferencedMapping);
         }
 
+
         //in-memory buffer to store converted JSON instances
-        DataItemBuffer jsonBufferContext = new DataItemBuffer();
-        DataItemBuffer jsonBufferPLD = null;
-        if (usePLDFilter)
-            jsonBufferPLD = new DataItemBuffer();
-
-
-        jsonBufferContext.registerSink(new FileJSONSink(new PrintStream(
-                outputDir + File.separator + "simple_harvesting-" + p + ".json")));
-        if (usePLDFilter)
-            jsonBufferPLD.registerSink(new FileJSONSink(new PrintStream(
-                    outputDir + File.separator + "pld_harvesting-" + p + ".json")));
+        DataItemBuffer jsonBufferBaseContext = new DataItemBuffer();
+        DataItemBuffer jsonBufferBasePLD = new DataItemBuffer();
+        DataItemBuffer jsonBufferInferContext = new DataItemBuffer();
+        DataItemBuffer jsonBufferInferPLD = new DataItemBuffer();
 
 
         //connect parser and json cache
-        Harvester harvesterContext = new Harvester(parserContext, jsonBufferContext);
-        Harvester harvesterPLD = null;
+        ContextHarvester harvesterBaseContext = new ContextHarvester(parserBaseContext, rdfInstanceCache, jsonBufferBaseContext, datasourceURIs);
+        parserBaseContext.setHarvester(harvesterBaseContext);
+
+        ContextHarvester harvesterInferContext = null;
+        PLDHarvester harvesterBasePLD = null;
+        PLDHarvester harvesterInferPLD = null;
+        if (useInferencing) {
+            harvesterInferContext = new ContextHarvester(parserInferContext, rdfInstanceCache, jsonBufferInferContext, inferencedDS);
+            parserInferContext.setHarvester(harvesterInferContext);
+        }
+        if (usePLDFilter) {
+            harvesterBasePLD = new PLDHarvester(parserBasePLD, rdfInstanceCache, jsonBufferBasePLD, datasourceURIs);
+            parserBasePLD.setHarvester(harvesterBasePLD);
+            if (useInferencing) {
+                harvesterInferPLD = new PLDHarvester(parserInferPLD, rdfInstanceCache, jsonBufferInferPLD, inferencedDS);
+                parserInferPLD.setHarvester(harvesterInferPLD);
+            }
+        }
+
+
+        jsonBufferBaseContext.registerSink(new FileJSONSink(new PrintStream(
+                outputDir + File.separator + "simple_harvesting-" + p + ".json")));
+        if(useInferencing)
+            jsonBufferInferContext.registerSink(new FileJSONSink(new PrintStream(
+                    outputDir + File.separator + "simple_harvesting_inferencing-" + p + ".json")));
         if (usePLDFilter)
-            harvesterPLD = new Harvester(parserPLD, jsonBufferPLD);
+            jsonBufferBasePLD.registerSink(new FileJSONSink(new PrintStream(
+                    outputDir + File.separator + "pld_harvesting-" + p + ".json")));
+        if (usePLDFilter && useInferencing)
+            jsonBufferInferPLD.registerSink(new FileJSONSink(new PrintStream(
+                    outputDir + File.separator + "pld_harvesting_inferencing-" + p + ".json")));
 
         //listen to RDF instances
-        rdfInstanceCacheContext.registerCacheListener(harvesterContext);
+        rdfInstanceCache.registerCacheListener(harvesterBaseContext);
+        if(useInferencing)
+            rdfInstanceCache.registerCacheListener(harvesterInferContext);
         if (usePLDFilter)
-            rdfInstanceCachePLD.registerCacheListener(harvesterPLD);
-
+            rdfInstanceCache.registerCacheListener(harvesterBasePLD);
+        if (usePLDFilter && useInferencing)
+            rdfInstanceCache.registerCacheListener(harvesterInferPLD);
 
         logger.info("Harvesting started ....");
         long startTime = System.currentTimeMillis();
@@ -305,17 +323,25 @@ public class Main {
         //starting the source starts all machinery
         quintSource.start();
 
+
+//        try {
+//            harvesterContext.join();
+//            harvesterPLD.join();
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
         long endTime = System.currentTimeMillis();
         long time = ((endTime - startTime) / 1000) / 60;
         logger.info("Harvesting took: " + time + " min");
 
+
         /*
             export some statistics
          */
-        String simpleHarvestingInfoString = "Simple Harvesting: " + parserContext.getMissingConcept() + " Missing Concepts " +
-                parserContext.getMissingPerson() + " Missing Persons " +
-                parserContext.getMissingVenue() + " Missing Venue! " +
-                (parserContext.getMissingVenue() + parserContext.getMissingPerson() + parserContext.getMissingConcept()) + " total Cachemisses!";
+        String simpleHarvestingInfoString = "Simple Harvesting: " + parserBaseContext.getMissingConcept() + " Missing Concepts " +
+                parserBaseContext.getMissingPerson() + " Missing Persons " +
+                parserBaseContext.getMissingVenue() + " Missing Venue! " +
+                (parserBaseContext.getMissingVenue() + parserBaseContext.getMissingPerson() + parserBaseContext.getMissingConcept()) + " total Cache Misses!";
         logger.info(simpleHarvestingInfoString);
 
         File fileContext = new File(outputDir + File.separator +
@@ -327,12 +353,29 @@ public class Main {
         } catch (IOException e1) {
             e1.printStackTrace();
         }
+        if (useInferencing){
+            String simpleHarvestingInferencingInfoString = "Simple Harvesting: " + parserInferContext.getMissingConcept() + " Missing Concepts " +
+                    parserInferContext.getMissingPerson() + " Missing Persons " +
+                    parserInferContext.getMissingVenue() + " Missing Venue! " +
+                    (parserInferContext.getMissingVenue() + parserInferContext.getMissingPerson() + parserInferContext.getMissingConcept()) + " total Cache Misses!";
+            logger.info(simpleHarvestingInferencingInfoString);
+
+            File fileInferContext = new File(outputDir + File.separator +
+                    "simple_harvesting_inferencing-" + p + "_cache_misses.txt");
+            try (FileWriter writer = new FileWriter(fileInferContext, false)) {
+                PrintWriter pw = new PrintWriter(writer);
+                pw.println(simpleHarvestingInferencingInfoString);
+                pw.close();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        }
 
         if (usePLDFilter) {
-            String pldHarvestingInfoString = "PLD Harvesting: " + parserPLD.getMissingConcept() + " Missing Concepts " +
-                    parserPLD.getMissingPerson() + " Missing Persons " +
-                    parserPLD.getMissingVenue() + " Missing Venue! " +
-                    (parserPLD.getMissingVenue() + parserPLD.getMissingPerson() + parserPLD.getMissingConcept()) + " total Cachemisses!";
+            String pldHarvestingInfoString = "PLD Harvesting: " + parserBasePLD.getMissingConcept() + " Missing Concepts " +
+                    parserBasePLD.getMissingPerson() + " Missing Persons " +
+                    parserBasePLD.getMissingVenue() + " Missing Venue! " +
+                    (parserBasePLD.getMissingVenue() + parserBasePLD.getMissingPerson() + parserBasePLD.getMissingConcept()) + " total Cache Misses!";
             logger.info(pldHarvestingInfoString);
 
             File filePLD = new File(outputDir + File.separator +
@@ -345,6 +388,27 @@ public class Main {
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
+            if(useInferencing){
+                String pldHarvestingInferencingInfoString = "PLD Harvesting: " + parserInferPLD.getMissingConcept() + " Missing Concepts " +
+                        parserInferPLD.getMissingPerson() + " Missing Persons " +
+                        parserInferPLD.getMissingVenue() + " Missing Venue! " +
+                        (parserInferPLD.getMissingVenue() + parserInferPLD.getMissingPerson() + parserInferPLD.getMissingConcept()) + " total Cache Misses!";
+                logger.info(pldHarvestingInferencingInfoString);
+
+                File fileInferPLD = new File(outputDir + File.separator +
+                        "pld_harvesting_inferencing-" + p + "_cache_misses.txt");
+
+                try (FileWriter writer = new FileWriter(fileInferPLD, false)) {
+                    PrintWriter pw = new PrintWriter(writer);
+                    pw.println(pldHarvestingInferencingInfoString);
+                    pw.close();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+            }
         }
+        //delete cache
+        logger.debug("Deleting cache...");
+        rdfInstanceCache.flush();
     }
 }

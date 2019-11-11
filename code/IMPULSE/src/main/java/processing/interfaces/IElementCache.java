@@ -73,9 +73,8 @@ public interface IElementCache<T extends ILocatable> {
 	/**
 	 * Flushes the whole cache. That means, that all elements have to be removed
 	 * from it, triggering the listener callbacks
-	 * @param deleteAfterwards clears the cache after flushing
 	 */
-	void flush(boolean deleteAfterwards);
+	void flush();
 
 	/**
 	 * Registers an {@link IElementCacheListener}. It will be called for each
@@ -84,7 +83,7 @@ public interface IElementCache<T extends ILocatable> {
 	 * @param listener
 	 *            The listener to be registered
 	 */
-	void registerCacheListener(IElementCacheListener<T> listener);
+	void registerCacheListener(IElementCacheListener listener);
 
 	/**
 	 * Signals that no more instances should be cached. Listeners should be

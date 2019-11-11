@@ -34,6 +34,7 @@ public class DataItemBuffer implements IParsedItemBuffer<DataItem> {
         sinks = new LinkedList<>();
     }
 
+
     @Override
     public void add(DataItem item) {
         if (item.getMetadataPersons() != null)
