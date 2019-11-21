@@ -750,4 +750,12 @@ public class MOVINGParser {
     public void setMissingConcept(int missingConcept) {
         this.missingConcept = missingConcept;
     }
+
+
+
+
+    public String getStatisticsString(){
+        return getMissingConcept() + " Missing Concepts " + getMissingPerson() + " Missing Persons " + getMissingVenue()
+                + " Missing Venue! " + (getMissingVenue() + getMissingPerson() + getMissingConcept()) + " total Cache Misses!";
+    }
 }

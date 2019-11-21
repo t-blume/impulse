@@ -24,7 +24,7 @@ public class LongQueue<T> {
 
     public void add(T resource) {
         //start from last queue
-        if (fifoQueues.get(fifoQueues.size() - 1).size() >= 2147483639) {
+        if (fifoQueues.get(fifoQueues.size() - 1).size() >= 2147480000) {
             //last queue is already full
             ArrayDeque<T> newQueue = new ArrayDeque<>();
             newQueue.add(resource);

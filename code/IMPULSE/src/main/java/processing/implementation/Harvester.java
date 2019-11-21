@@ -41,6 +41,10 @@ public class Harvester extends Thread implements IElementCacheListener {
         this.jsonCache = dataItemBuffer;
     }
 
+    public MOVINGParser getParser() {
+        return parser;
+    }
+
     @Override
     public void startWorking(LongQueue<IResource> fifoQueue) {
         this.fifoQueue = fifoQueue;

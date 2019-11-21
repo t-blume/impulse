@@ -24,7 +24,7 @@ public class DataItemBuffer implements IParsedItemBuffer<DataItem> {
     private LinkedHashSet<DataItem> set;
 
 
-    public DataItemBuffer(){
+    public DataItemBuffer() {
         this(100000);
     }
 
@@ -39,7 +39,7 @@ public class DataItemBuffer implements IParsedItemBuffer<DataItem> {
     public void add(DataItem item) {
         if (item.getMetadataPersons() != null)
             set.add(item);
-        if(set.size() >= capacity) {
+        if (set.size() >= capacity) {
             logger.info("Flushing intermediate chunk of " + set.size() + " items to sinks!");
             flush();
         }
@@ -69,10 +69,7 @@ public class DataItemBuffer implements IParsedItemBuffer<DataItem> {
             }
         });
         //flush json strings to sinks
-        sinks.forEach(S -> {
-            S.bulkExport(exportList);
-        });
-
+        sinks.forEach(S -> S.bulkExport(exportList));
         set = new LinkedHashSet<>();
     }
 

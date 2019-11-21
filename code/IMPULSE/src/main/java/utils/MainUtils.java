@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.zip.GZIPInputStream;
 
 public class MainUtils {
 
@@ -29,18 +30,18 @@ public class MainUtils {
         return s;
     }
 
-    public static boolean contains(Object[] objects, Object o){
-        if(objects == null || objects.length <= 0)
+    public static boolean contains(Object[] objects, Object o) {
+        if (objects == null || objects.length <= 0)
             return false;
 
-        for(int i=0; i < objects.length; i++){
-            if(objects[i].equals(o))
+        for (int i = 0; i < objects.length; i++) {
+            if (objects[i].equals(o))
                 return true;
         }
         return false;
     }
 
-    public static String[] convertJSONArray2StringArray(JSONArray jsonArray){
+    public static String[] convertJSONArray2StringArray(JSONArray jsonArray) {
         String[] tmps = new String[jsonArray.length()];
         for (int i = 0; i < jsonArray.length(); i++)
             tmps[i] = jsonArray.get(i).toString();
@@ -55,7 +56,8 @@ public class MainUtils {
 
         return tmps;
     }
-    public static File createFile(String filepath){
+
+    public static File createFile(String filepath) {
         File targetFile = new File(filepath);
         File parent = targetFile.getParentFile();
         if (!parent.exists() && !parent.mkdirs()) {
@@ -64,7 +66,7 @@ public class MainUtils {
         return targetFile;
     }
 
-    public static String editStrings(String context)  throws NullPointerException, StringIndexOutOfBoundsException{
+    public static String editStrings(String context) throws NullPointerException, StringIndexOutOfBoundsException {
         StringBuffer t = new StringBuffer(context);
         if (t.toString().contains("<"))
             t.deleteCharAt(t.indexOf("<"));
@@ -107,9 +109,15 @@ public class MainUtils {
         return sb.toString();
     }
 
-    public static HashSet<String> loadContexts(String filename) {
+    public static HashSet<String> loadContexts(String filename) throws IOException {
         HashSet<String> contextURIs = new HashSet<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+        InputStreamReader is;
+        if (filename.endsWith(".gz"))
+            is = new InputStreamReader(new GZIPInputStream(new FileInputStream(filename)));
+         else
+            is = new InputStreamReader(new FileInputStream(filename));
+
+        try (BufferedReader br = new BufferedReader(is)) {
             String line;
             while ((line = br.readLine()) != null) {
                 // process the line.
@@ -154,9 +162,6 @@ public class MainUtils {
     }
 
 
-
-
-
     public static String normalizeURL(String url) throws URISyntaxException {
         if (url == null)
             return null;
@@ -166,12 +171,12 @@ public class MainUtils {
 
         URI uri = new URI(url);
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(uri.getHost() == null? "" : uri.getHost().replaceAll("www\\.", ""));
-        stringBuilder.append(uri.getPath() == null? "" : uri.getPath());
-        stringBuilder.append(uri.getQuery() == null? "" : uri.getQuery());
-        stringBuilder.append(uri.getFragment() == null? "" : uri.getFragment());
+        stringBuilder.append(uri.getHost() == null ? "" : uri.getHost().replaceAll("www\\.", ""));
+        stringBuilder.append(uri.getPath() == null ? "" : uri.getPath());
+        stringBuilder.append(uri.getQuery() == null ? "" : uri.getQuery());
+        stringBuilder.append(uri.getFragment() == null ? "" : uri.getFragment());
 
-        if(stringBuilder.toString() == null)
+        if (stringBuilder.toString() == null)
             System.out.println("ERRRROR: " + url);
         return stringBuilder.toString();
     }
@@ -179,6 +184,7 @@ public class MainUtils {
 
     /**
      * proper way to extract PLD
+     *
      * @param uri
      * @return
      * @throws URISyntaxException
@@ -186,13 +192,13 @@ public class MainUtils {
     public static String extractPLD(String uri) throws URISyntaxException {
         if (uri == null)
             return null;
-        if(uri.trim().isEmpty())
+        if (uri.trim().isEmpty())
             return "";
 
         URI parsedUri = new URI("http://" + uri);
 
         String pld = parsedUri.getHost();
-        if(pld == null)
+        if (pld == null)
             return parsedUri.toString();
 
         return pld;
