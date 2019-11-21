@@ -12,8 +12,6 @@ import org.apache.logging.log4j.Logger;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
-import java.util.Stack;
 
 
 /**
@@ -24,6 +22,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
     private static final Logger logger = LogManager.getLogger(LRUFiFoInstanceCache.class.getSimpleName());
     private static final int loggingInterval = 5000;
 
+    private static final int DISK_CACHE_FOLDER_DEPTH = 2;
     //location where to store elements that do no fit in main memory
     private String diskCachedElements;
     //Least-Recently Used (LRU) elements stored in memory
@@ -47,6 +46,15 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
     private Object sync = new Object();
 
+
+    private void initSubFolders(String baseFolder, int depth) {
+        for (int i = -9; i < 10; i++) {
+            new File(baseFolder + File.separator + i).mkdir();
+            if (depth < DISK_CACHE_FOLDER_DEPTH)
+                initSubFolders(baseFolder + File.separator + i, depth + 1);
+        }
+    }
+
     /**
      * Constructor. Creates a cache with the given capacity
      *
@@ -55,6 +63,8 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
     public LRUFiFoInstanceCache(int capacity, String diskCachedElements, boolean deleteDiskCache) {
         this.diskCachedElements = diskCachedElements;
         new File(diskCachedElements).mkdirs();
+        initSubFolders(diskCachedElements, 1);
+
         memoryCachedElements = new LRUCache<>(capacity, 0.75f);
         listeners = new ArrayList<>();
         fifoQueue = new LongQueue<>();
@@ -207,12 +217,12 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
 
     private boolean diskContains(IResource resource) {
-        return new File(diskCachedElements + File.separator + resource.hashCode() + ".ser.tmp").exists();
+        return new File(hashToFilename(resource.hashCode())).exists();
     }
 
     private T getFromDisk(IResource resource) {
         T res = null;
-        File file = new File(diskCachedElements + File.separator + resource.hashCode() + ".ser.tmp");
+        File file = new File(hashToFilename(resource.hashCode()));
         if (file.exists()) {
             try {
                 ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
@@ -228,7 +238,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
     }
 
     private void saveToDisk(T element) {
-        File file = new File(diskCachedElements + File.separator + String.valueOf(element.getLocator().hashCode()) + ".ser.tmp");
+        File file = new File(hashToFilename(element.getLocator().hashCode()));
         try {
             ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file));
             oos.writeObject(element);
@@ -236,5 +246,21 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+
+    private String hashToFilename(int hashcode) {
+        String filename = diskCachedElements + File.separator;
+        String tmp = String.valueOf(hashcode);
+        if (tmp.startsWith("-")){
+            filename += '-';
+            tmp = tmp.replaceFirst("-", "");
+        }
+        char[] hashDigits = tmp.toCharArray();
+        for (int i = 0; i < DISK_CACHE_FOLDER_DEPTH; i++)
+            filename += hashDigits[i] + File.separator;
+
+
+        return filename + hashcode + ".ser.tmp";
     }
 }

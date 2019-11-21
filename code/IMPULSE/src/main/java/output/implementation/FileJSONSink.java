@@ -39,8 +39,8 @@ public class FileJSONSink implements IJsonSink {
         if (count % logger_interval == 0)
             logger.debug("Printed data item: " + count + "\r");
 
-        if (count > 1)
-            pw.println(jsonString);
+
+        pw.println(jsonString);
         return true;
     }
 
@@ -54,6 +54,7 @@ public class FileJSONSink implements IJsonSink {
         for (String jsonString : jsonStrings)
             successful = export(jsonString) ? successful++ : successful;
 
+        pw.flush();
         return successful;
     }
 }
