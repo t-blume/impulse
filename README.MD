@@ -25,7 +25,7 @@ Required options: f, m, [-o output folder]
 $ java -jar impulse.jar -f testresources/sample-rdf-data.nt.gz -m testresources/sample-mapping.json -o testresources -ds testresources/sample-datasourceURIs.csv -fb -c 5000
 
 ```
-#### How to reproduce the experiments?
+#### How to setup the data search experiment.
 
   1. Download the BTC 2014 dataset from http://km.aifb.kit.edu/projects/btc-2014/
   3. Query the schema-level index available at http://lodatio.informatik.uni-kiel.de/. Alternatively, use the data source URIs provided.
