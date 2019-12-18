@@ -68,5 +68,14 @@ The results from our expriments can be found in zendodo
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2553811.svg)](https://doi.org/10.5281/zenodo.2553811)
 
 
+
+#### Compile sources
+1. Add MOVINGParser to local maven repository:
+ ``mvn install:install-file -Dfile=libs/MOVINGParser-1.5.jar -DgroupId=kd.informatik -DartifactId=moving-parser -Dversion=1.5 -Dpackaging=jar -DgeneratePom=true``
+
+2. Compile sources: ``mvn package``
+
+3. Run jar 
+
 #### Acknowledgments
 This research was co-financed by the EU H2020 project [MOVING](http://www.moving-project.eu/) under contract no 693092.
