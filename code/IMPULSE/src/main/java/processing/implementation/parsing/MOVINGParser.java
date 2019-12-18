@@ -12,9 +12,7 @@ import main.java.common.interfaces.IInstanceElement;
 import main.java.common.interfaces.IQuint;
 import main.java.common.interfaces.IResource;
 import main.java.processing.implementation.Harvester;
-import main.java.processing.interfaces.IElementCache;
 import main.java.utils.DataCleansing;
-import main.java.utils.MainUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.semanticweb.yars.nx.BNode;
@@ -755,7 +753,8 @@ public class MOVINGParser {
 
 
     public String getStatisticsString(){
-        return getMissingConcept() + " Missing Concepts " + getMissingPerson() + " Missing Persons " + getMissingVenue()
-                + " Missing Venue! " + (getMissingVenue() + getMissingPerson() + getMissingConcept()) + " total Cache Misses!";
+        return "Harvested " + dataItemCounter + " data items (" + getMissingConcept() + " Missing Concepts, "
+                + getMissingPerson() + " Missing Persons, " + getMissingVenue() + " Missing Venues, and " +
+                (getMissingVenue() + getMissingPerson() + getMissingConcept()) + " total Cache Misses)";
     }
 }

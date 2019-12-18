@@ -5,6 +5,7 @@ import main.java.output.interfaces.IJsonSink;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.List;
 
@@ -18,15 +19,22 @@ public class FileJSONSink implements IJsonSink {
 
     private final PrintStream pw;
     private int count = 0;
+    private String outputFilename = null;
 
     public FileJSONSink(PrintStream pw) {
         this.pw = pw;
     }
 
+    public FileJSONSink(String outputFilename) throws FileNotFoundException {
+        this.pw = new PrintStream(outputFilename);
+        this.outputFilename = outputFilename;
+    }
+
     @Override
     public boolean close() {
         pw.close();
-        logger.info("Exported " + count + " data items!");
+        String name = outputFilename == null? "" : outputFilename;
+        logger.info("Exported " + count + " data items to " + name);
         return true;
     }
 
@@ -34,10 +42,11 @@ public class FileJSONSink implements IJsonSink {
     public boolean export(String jsonString) {
         if (jsonString == null || jsonString.isEmpty())
             return false;
+        String name = outputFilename == null? "" : outputFilename;
 
         count++;
         if (count % logger_interval == 0)
-            logger.debug("Printed data item: " + count + "\r");
+            logger.debug("Printed data item: " + count + " ("+name+") \r");
 
 
         pw.println(jsonString);

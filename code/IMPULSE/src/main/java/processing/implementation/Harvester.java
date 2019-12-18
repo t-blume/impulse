@@ -39,6 +39,7 @@ public class Harvester extends Thread implements IElementCacheListener {
         this.parser = parser;
         this.cache = cache;
         this.jsonCache = dataItemBuffer;
+        this.cache.registerCacheListener(this);
     }
 
     public MOVINGParser getParser() {
@@ -80,5 +81,7 @@ public class Harvester extends Thread implements IElementCacheListener {
     public void finished() {
         logger.info("Harvesting of " + successful + "/" + (successful + erroneous) + " finished successfully, flushing to sinks...");
         jsonCache.flush();
+        logger.info("Closing sinks...");
+        jsonCache.close();
     }
 }
