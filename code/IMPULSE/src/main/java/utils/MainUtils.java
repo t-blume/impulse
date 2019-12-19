@@ -204,4 +204,17 @@ public class MainUtils {
         return pld;
     }
 
+    public static void deleteDirectory(String dirname){
+        File tmpFolder = new File(dirname);
+        String[] entries = tmpFolder.list();
+        for (String s : entries) {
+            File currentFile = new File(tmpFolder.getPath(), s);
+            if(currentFile.isFile())
+                currentFile.delete();
+            else
+                deleteDirectory(currentFile.getPath());
+        }
+        tmpFolder.delete();
+    }
+
 }

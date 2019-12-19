@@ -25,8 +25,8 @@ public class ContextHarvester extends Harvester implements IElementCacheListener
     long filteredInstances = 0L;
     long filteredQuads = 0L;
 
-    public ContextHarvester(MOVINGParser parser, IElementCache<IInstanceElement> cache, DataItemBuffer dataItemBuffer, Set<String> contexts) {
-        super(parser, cache, dataItemBuffer);
+    public ContextHarvester(String name, MOVINGParser parser, IElementCache<IInstanceElement> cache, DataItemBuffer dataItemBuffer, Set<String> contexts) {
+        super(name, parser, cache, dataItemBuffer);
         this.contexts = new HashSet<>();
         contexts.forEach(C -> {
             try {
@@ -35,13 +35,11 @@ public class ContextHarvester extends Harvester implements IElementCacheListener
                 e.printStackTrace();
             }
         });
-        setLogger(LogManager.getLogger(ContextHarvester.class.getSimpleName()));
         logger.debug(contexts.size());
     }
 
-    public ContextHarvester(MOVINGParser parser, IElementCache<IInstanceElement> cache, DataItemBuffer dataItemBuffer) {
-        super(parser, cache, dataItemBuffer);
-        setLogger(LogManager.getLogger(ContextHarvester.class.getSimpleName()));
+    public ContextHarvester(String name, MOVINGParser parser, IElementCache<IInstanceElement> cache, DataItemBuffer dataItemBuffer) {
+        super(name, parser, cache, dataItemBuffer);
     }
 
 
@@ -73,10 +71,11 @@ public class ContextHarvester extends Harvester implements IElementCacheListener
 
     @Override
     public void finished() {
-        logger.info("Harvesting of " + successful + "/" + (successful + erroneous) + " instances finished successfully, "+  filteredInstances + " instances filtered!" +
+        logger.info("Harvesting of " + successful + "/" + (successful + erroneous) + " instances finished successfully, " + filteredInstances + " instances filtered!" +
                 " Flushing them to sinks...");
         logger.debug("Filtered Quads: " + filteredQuads);
         jsonCache.flush();
-        cache.flush();
+        logger.info("Closing sinks...");
+        jsonCache.close();
     }
 }

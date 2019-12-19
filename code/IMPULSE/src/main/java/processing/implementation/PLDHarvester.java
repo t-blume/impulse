@@ -19,8 +19,8 @@ import java.util.Set;
  * Created by Blume Till on 07.11.2019.
  */
 public class PLDHarvester extends ContextHarvester implements IElementCacheListener {
-    public PLDHarvester(MOVINGParser parser, IElementCache<IInstanceElement> cache, DataItemBuffer dataItemBuffer, Set<String> contexts) {
-        super(parser, cache, dataItemBuffer);
+    public PLDHarvester(String name, MOVINGParser parser, IElementCache<IInstanceElement> cache, DataItemBuffer dataItemBuffer, Set<String> contexts) {
+        super(name, parser, cache, dataItemBuffer);
         this.contexts = new HashSet<>();
         contexts.forEach(C -> {
             try {
@@ -29,7 +29,6 @@ public class PLDHarvester extends ContextHarvester implements IElementCacheListe
                 e.printStackTrace();
             }
         });
-        setLogger(LogManager.getLogger(PLDHarvester.class.getSimpleName()));
     }
 
 

@@ -13,6 +13,8 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import static main.java.utils.MainUtils.deleteDirectory;
+
 
 /**
  * @param <T>
@@ -184,15 +186,8 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 //        }
         memoryCachedElements = new LRUCache<>(capacity, 0.75f);
         fifoQueue = new LongQueue<>();
-        if (deleteDiskCache) {
-            File tmpFolder = new File(diskCachedElements);
-            String[] entries = tmpFolder.list();
-            for (String s : entries) {
-                File currentFile = new File(tmpFolder.getPath(), s);
-                currentFile.delete();
-            }
-            tmpFolder.delete();
-        }
+        if (deleteDiskCache)
+            deleteDirectory(diskCachedElements);
     }
 
     @Override

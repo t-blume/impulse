@@ -33,7 +33,7 @@ public class FileJSONSink implements IJsonSink {
     @Override
     public boolean close() {
         pw.close();
-        String name = outputFilename == null? "" : outputFilename;
+        String name = outputFilename == null ? "" : outputFilename;
         logger.info("Exported " + count + " data items to " + name);
         return true;
     }
@@ -42,11 +42,11 @@ public class FileJSONSink implements IJsonSink {
     public boolean export(String jsonString) {
         if (jsonString == null || jsonString.isEmpty())
             return false;
-        String name = outputFilename == null? "" : outputFilename;
+        String name = outputFilename == null ? "" : outputFilename;
 
         count++;
         if (count % logger_interval == 0)
-            logger.debug("Printed data item: " + count + " ("+name+") \r");
+            logger.debug("Printed data item: " + count + " (" + name + ") \r");
 
 
         pw.println(jsonString);

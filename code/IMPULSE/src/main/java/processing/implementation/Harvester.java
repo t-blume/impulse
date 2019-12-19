@@ -16,11 +16,8 @@ import org.apache.logging.log4j.Logger;
  * Created by Blume Till on 07.11.2016.
  */
 public class Harvester extends Thread implements IElementCacheListener {
-    Logger logger = LogManager.getLogger(Harvester.class.getSimpleName());
 
-    void setLogger(Logger logger){
-        this.logger = logger;
-    }
+    Logger logger;
 
     //Parser that used the imported mapping file to convert RDF instances to JSON instances
     private MOVINGParser parser;
@@ -35,11 +32,13 @@ public class Harvester extends Thread implements IElementCacheListener {
     int successful = 0;
     int erroneous = 0;
 
-    public Harvester(MOVINGParser parser, IElementCache<IInstanceElement> cache, DataItemBuffer dataItemBuffer) {
+    public Harvester(String name, MOVINGParser parser, IElementCache<IInstanceElement> cache, DataItemBuffer dataItemBuffer) {
         this.parser = parser;
         this.cache = cache;
         this.jsonCache = dataItemBuffer;
         this.cache.registerCacheListener(this);
+        this.logger = LogManager.getLogger(name);
+
     }
 
     public MOVINGParser getParser() {

@@ -25,7 +25,7 @@ public class DataItemBuffer implements IParsedItemBuffer<DataItem> {
 
 
     public DataItemBuffer() {
-        this(100);
+        this(5000);
     }
 
     public DataItemBuffer(int capacity) {

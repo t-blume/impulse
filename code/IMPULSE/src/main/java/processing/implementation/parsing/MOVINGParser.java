@@ -51,7 +51,6 @@ public class MOVINGParser {
 
     public MOVINGParser(Mapping mapping) {
         this.mapping = mapping;
-
         setMissingConcept(0);
         setMissingPerson(0);
         setMissingVenue(0);
@@ -87,6 +86,8 @@ public class MOVINGParser {
     }
 
     public DataItem convertInstance2JSON(IInstanceElement instanceElement) {
+        if(instanceElement.getOutgoingQuints().size() <= 0)
+            return null;
         DataItem dataItem = new DataItem();
         dataItem.setSourceURLs(new HashSet<>());
 
@@ -753,7 +754,7 @@ public class MOVINGParser {
 
 
     public String getStatisticsString(){
-        return "Harvested " + dataItemCounter + " data items (" + getMissingConcept() + " Missing Concepts, "
+        return "Parsed " + dataItemCounter + "(not unique) data items (" + getMissingConcept() + " Missing Concepts, "
                 + getMissingPerson() + " Missing Persons, " + getMissingVenue() + " Missing Venues, and " +
                 (getMissingVenue() + getMissingPerson() + getMissingConcept()) + " total Cache Misses)";
     }
