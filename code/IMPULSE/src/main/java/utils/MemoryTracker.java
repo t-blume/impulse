@@ -93,14 +93,14 @@ public class MemoryTracker implements IQuintListener {
 
 
     ////DIRTY LITTLE HELPER
-    private long getReallyUsedMemory() {
+    public long getReallyUsedMemory() {
         long before = getGcCount();
         System.gc();
         while (getGcCount() == before) ;
         return getCurrentlyUsedMemory();
     }
 
-    private long getGcCount() {
+    public long getGcCount() {
         long sum = 0;
         for (GarbageCollectorMXBean b : ManagementFactory.getGarbageCollectorMXBeans()) {
             long count = b.getCollectionCount();
@@ -111,15 +111,13 @@ public class MemoryTracker implements IQuintListener {
         return sum;
     }
 
-    private long getCurrentlyUsedMemory() {
-        return
-                ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() +
+    public long getCurrentlyUsedMemory() {
+        return ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() +
                         ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage().getUsed();
     }
 
-    private long getCurrentlyMaxMemory() {
-        return
-                ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax() +
+    public long getCurrentlyMaxMemory() {
+        return ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax() +
                         ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage().getMax();
     }
 }

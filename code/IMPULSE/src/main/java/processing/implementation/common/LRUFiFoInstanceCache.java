@@ -6,6 +6,7 @@ import main.java.processing.interfaces.IElementCache;
 import main.java.processing.interfaces.IElementCacheListener;
 import main.java.utils.LRUCache;
 import main.java.utils.LongQueue;
+import main.java.utils.MemoryTracker;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -38,6 +39,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
     //maximum number of elements actually stored in memory/disk
     private long maxSize = 0;
+    private MemoryTracker memoryTracker = new MemoryTracker("stats2");
 
     //flush elements to each listener afterwards
     private List<IElementCacheListener> listeners;
@@ -119,21 +121,33 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
         return fifoQueue.size();
     }
 
+    private void removeEldest() {
+        T eldestElement = memoryCachedElements.getEldestEntry().getValue();
+        if (size() % loggingInterval == 0)
+            System.out.format("Instances parsed: %08d    \r", size());
+
+        //do not delete old element but store on disk
+        saveToDisk(eldestElement);
+        memoryCachedElements.remove(eldestElement.getLocator());
+    }
 
     private void put(T i) {
         // if memory is full -> move eldest entry to disk
         synchronized (sync) {
-            if (memoryCachedElements.size() >= capacity) {
-                T eldestElement = memoryCachedElements.getEldestEntry().getValue();
-                if (size() % loggingInterval == 0)
-                    System.out.format("Instances parsed: %08d    \r", size());
+            try {
+                if (memoryCachedElements.size() >= capacity) {
+                    removeEldest();
+                }
+                //finally, add new element to cache
+                memoryCachedElements.put(i.getLocator(), i);
+            } catch (OutOfMemoryError e) {
+                //TODO: handle memory leak
+                for (int j=0; j < 1000; j++)
+                    removeEldest();
 
-                //do not delete old element but store on disk
-                saveToDisk(eldestElement);
-                memoryCachedElements.remove(eldestElement.getLocator());
+                this.capacity = memoryCachedElements.size();
+                memoryCachedElements.put(i.getLocator(), i);
             }
-            //finally, add new element to cache
-            memoryCachedElements.put(i.getLocator(), i);
         }
     }
 
@@ -247,7 +261,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
     private String hashToFilename(int hashcode) {
         String filename = diskCachedElements + File.separator;
         String tmp = String.valueOf(hashcode);
-        if (tmp.startsWith("-")){
+        if (tmp.startsWith("-")) {
             filename += '-';
             tmp = tmp.replaceFirst("-", "");
         }
