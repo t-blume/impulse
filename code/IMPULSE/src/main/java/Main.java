@@ -15,6 +15,7 @@ import main.java.processing.implementation.parsing.MOVINGParser;
 import main.java.processing.implementation.preprocessing.*;
 import main.java.processing.interfaces.IElementCache;
 import main.java.utils.MainUtils;
+import main.java.utils.MemoryTracker;
 import org.apache.commons.cli.*;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -151,7 +152,7 @@ public class Main {
         }
     }
 
-    private static void runFullExperiment(String baseFolder, List<String> inputFiles, int cacheSize, String outputDir, boolean deleteDiskCache) throws IOException, InterruptedException {
+    private static void runFullExperiment(String baseFolder, List<String> inputFiles, int cacheSize, String outputDir, boolean deleteDiskCache) throws IOException {
         //extract actual file name (without parent folders)
         String p = getFileName(inputFiles);
 
@@ -167,11 +168,12 @@ public class Main {
         // all quints have to pass the pre-processing pipeline
         quintSource.registerQuintListener(preProcessingPipeline);
         //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
-        IElementCache<IInstanceElement> rdfInstanceCache = new LRUFiFoInstanceCache<>(cacheSize, "disk-cache", deleteDiskCache);
+        IElementCache<IInstanceElement> rdfInstanceCache = new LRUFiFoInstanceCache<>(cacheSize, "disk-cache2", deleteDiskCache);
         InstanceAggregator instanceAggregatorContext = new InstanceAggregator(rdfInstanceCache);
         preProcessingPipeline.registerQuintListener(instanceAggregatorContext);
 
-
+        MemoryTracker memoryTracker = new MemoryTracker("stats");
+        preProcessingPipeline.registerQuintListener(memoryTracker);
 
         /*
             DCTERMS

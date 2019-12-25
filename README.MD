@@ -75,7 +75,7 @@ The results from our expriments can be found in zendodo
 
 2. Compile sources: ``mvn package``
 
-3. Run jar 
+3. Run jar, e.g., ``java -Xmx800G -jar target/IMPULSE-1.0-SNAPSHOT.jar -f testresources/sample-rdf-data.nt.gz -o experiment -c 12500000 -fe ../../ -ddc`` 
 
 #### Acknowledgments
 This research was co-financed by the EU H2020 project [MOVING](http://www.moving-project.eu/) under contract no 693092.
