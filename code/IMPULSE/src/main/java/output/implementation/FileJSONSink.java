@@ -34,7 +34,7 @@ public class FileJSONSink implements IJsonSink {
     public boolean close() {
         pw.close();
         String name = outputFilename == null ? "" : outputFilename;
-        logger.info("Exported " + count + " data items to " + name);
+        logger.info("Exported " + String.format("%,d", count) + " data items to " + name);
         return true;
     }
 
@@ -46,7 +46,7 @@ public class FileJSONSink implements IJsonSink {
 
         count++;
         if (count % logger_interval == 0)
-            logger.debug("Printed data item: " + count + " (" + name + ") \r");
+            logger.debug("Printed data item: " + String.format("%,d", count) + " (" + name + ") \r");
 
 
         pw.println(jsonString);

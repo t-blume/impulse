@@ -48,7 +48,7 @@ public class Harvester extends Thread implements IElementCacheListener {
     @Override
     public void startWorking(LongQueue<IResource> fifoQueue) {
         this.fifoQueue = fifoQueue;
-        logger.debug("Starting to iterate over " + fifoQueue.size() + " instances.");
+        logger.debug("Starting to iterate over " + String.format("%,d", fifoQueue.size()) + " instances.");
         this.start();
     }
 
@@ -78,7 +78,8 @@ public class Harvester extends Thread implements IElementCacheListener {
     }
 
     public void finished() {
-        logger.info("Harvesting of " + successful + "/" + (successful + erroneous) + " finished successfully, flushing to sinks...");
+        logger.info("Harvesting of " + String.format("%,d", successful) + "/" + String.format("%,d", successful + erroneous) +
+                " finished successfully, flushing to sinks...");
         jsonCache.flush();
         logger.info("Closing sinks...");
         jsonCache.close();

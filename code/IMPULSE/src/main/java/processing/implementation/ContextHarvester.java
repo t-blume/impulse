@@ -10,7 +10,6 @@ import main.java.processing.implementation.parsing.MOVINGParser;
 import main.java.processing.interfaces.IElementCache;
 import main.java.processing.interfaces.IElementCacheListener;
 import main.java.utils.MainUtils;
-import org.apache.logging.log4j.LogManager;
 
 import java.net.URISyntaxException;
 import java.util.HashSet;
@@ -35,7 +34,7 @@ public class ContextHarvester extends Harvester implements IElementCacheListener
                 e.printStackTrace();
             }
         });
-        logger.debug(contexts.size());
+        logger.debug("loaded " +  String.format("%,d", contexts.size()) + " sources.");
     }
 
     public ContextHarvester(String name, MOVINGParser parser, IElementCache<IInstanceElement> cache, DataItemBuffer dataItemBuffer) {

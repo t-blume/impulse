@@ -81,12 +81,12 @@ public class MOVINGParser {
         newData = new HashSet<>();
     }
 
-    public void setHarvester(Harvester harvester){
+    public void setHarvester(Harvester harvester) {
         this.harvester = harvester;
     }
 
     public DataItem convertInstance2JSON(IInstanceElement instanceElement) {
-        if(instanceElement.getOutgoingQuints().size() <= 0)
+        if (instanceElement.getOutgoingQuints().size() <= 0)
             return null;
         DataItem dataItem = new DataItem();
         dataItem.setSourceURLs(new HashSet<>());
@@ -181,9 +181,9 @@ public class MOVINGParser {
 
     public void finished() {
         logger.info("Harvesting finished!");
-        logger.info("Successfully parsed " + dataItemCounter + " bibliographic data items");
-        logger.info("Data Items with more than 1 title: " + dataItemsWithMoreThanOneTitle);
-        logger.info("Data Items with more than 1 abstract: " + dataItemsWithMoreThanOneAbstract);
+        logger.info("Successfully parsed " + String.format("%,d", dataItemCounter) + " bibliographic data items");
+        logger.info("Data Items with more than 1 title: " + String.format("%,d", dataItemsWithMoreThanOneTitle));
+        logger.info("Data Items with more than 1 abstract: " + String.format("%,d", dataItemsWithMoreThanOneAbstract));
     }
 
     //////////////////////////////////////////////////////////////////
@@ -751,9 +751,7 @@ public class MOVINGParser {
     }
 
 
-
-
-    public String getStatisticsString(){
+    public String getStatisticsString() {
         return "Parsed " + dataItemCounter + "(not unique) data items (" + getMissingConcept() + " Missing Concepts, "
                 + getMissingPerson() + " Missing Persons, " + getMissingVenue() + " Missing Venues, and " +
                 (getMissingVenue() + getMissingPerson() + getMissingConcept()) + " total Cache Misses)";

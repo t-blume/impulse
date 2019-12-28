@@ -40,7 +40,7 @@ public class DataItemBuffer implements IParsedItemBuffer<DataItem> {
         if (item.getMetadataPersons() != null)
             set.add(item);
         if (set.size() >= capacity) {
-            logger.info("Flushing intermediate chunk of " + set.size() + " items to sinks!");
+            logger.info("Flushing intermediate chunk of " + String.format("%,d", set.size()) + " items to sinks!");
             flush();
         }
     }

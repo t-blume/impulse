@@ -23,7 +23,7 @@ import static main.java.utils.MainUtils.deleteDirectory;
 public class LRUFiFoInstanceCache<T extends ILocatable> implements
         IElementCache<T> {
     private static final Logger logger = LogManager.getLogger(LRUFiFoInstanceCache.class.getSimpleName());
-    private static final int loggingInterval = 5000;
+    private static final int loggingInterval = 50000;
 
     private static final int DISK_CACHE_FOLDER_DEPTH = 2;
     //location where to store elements that do no fit in main memory
@@ -50,6 +50,14 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
     private Object sync = new Object();
 
+    private long lastTime = System.currentTimeMillis();
+    private long start = System.currentTimeMillis();
+
+    private double maxTime = Double.MIN_VALUE;
+    private double minTime = Double.MAX_VALUE;
+
+    private long maxMemory = 0;
+    private long maxUsedMemory = 0;
 
     private void initSubFolders(String baseFolder, int depth) {
         for (int i = -9; i < 10; i++) {
@@ -135,16 +143,17 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
         // if memory is full -> move eldest entry to disk
         synchronized (sync) {
             try {
-                if (memoryCachedElements.size() >= capacity) {
+                if (memoryCachedElements.size() >= capacity)
                     removeEldest();
-                }
+
                 //finally, add new element to cache
                 memoryCachedElements.put(i.getLocator(), i);
             } catch (OutOfMemoryError e) {
                 //TODO: handle memory leak
-                for (int j=0; j < 1000; j++)
+                for (int j = 0; j < 1000; j++)
                     removeEldest();
 
+                logger.warn("Ran out of memory, adjusting cache size. Old: %,d%n, New: %,d%n", this.capacity, memoryCachedElements.size());
                 this.capacity = memoryCachedElements.size();
                 memoryCachedElements.put(i.getLocator(), i);
             }
@@ -171,33 +180,35 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
             addToQueue(i.getLocator());
             //increase total counter
             maxSize++;
+            if (maxSize % loggingInterval == 0) {
+                long currentTime = System.currentTimeMillis();
+                long delta = currentTime - lastTime;
+                lastTime = currentTime;
+                double instancesPerSecond = (100000.0 / delta * 1000.0);
+                maxTime = Math.max(instancesPerSecond, maxTime);
+                minTime = Math.min(instancesPerSecond, minTime);
+
+                long runtimeMaxMemory = memoryTracker.getCurrentlyMaxMemory();
+                long runtimeUsedMemory = memoryTracker.getReallyUsedMemory();
+
+                maxMemory = Math.max(runtimeMaxMemory, maxMemory);
+                maxUsedMemory = Math.max(maxUsedMemory, runtimeUsedMemory);
+
+                logger.info("--------------------------------------");
+                logger.info("Instance count: " + String.format("%,d", maxSize));
+                logger.info("Instance per second: " + String.format("%,d", (int) instancesPerSecond));
+                logger.info("Available Memory: " + String.format("%,d", runtimeMaxMemory / 1024 / 1024) + " MB");
+                logger.info("Used Memory: " + String.format("%,d", runtimeUsedMemory / 1024 / 1024) + " MB");
+
+            }
         }
         //add element to memory, dump something to disk if necessary
         put(i);
     }
 
-//    private void removeLast() {
-//        IResource first = pollFromQueue();
-//        T el = get(first);
-//        if (size() % loggingInterval == 0)
-//            System.out.format("\t\t\t\t\t\t\t\t\t\t\t\t\t\tIC: %08d / %08d\r", size(), maxSize);
-//
-//        notifyListeners(el);
-//    }
-
-//    private void notifyListeners(T el) {
-//        for (IElementCacheListener l : listeners)
-//            l.elementFlushed(el);
-//
-//    }
 
     @Override
     public void flush() {
-//        while (size() != 0) {
-//            if (size() % loggingInterval == 0)
-//                System.out.format("Items remaining: %08d    \r", size());
-//            removeLast();
-//        }
         memoryCachedElements = new LRUCache<>(capacity, 0.75f);
         fifoQueue = new LongQueue<>();
         if (deleteDiskCache)
@@ -211,7 +222,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
     @Override
     public void close() {
-        logger.info("Closing Instance Cache, flushing " + size() + " instances to listeners.");
+        logger.info("Closing Instance Cache, flushing " + String.format("%,d", size()) + " instances to listeners.");
         for (IElementCacheListener l : listeners)
             l.startWorking(fifoQueue.clone());
 
@@ -222,6 +233,22 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
                 e.printStackTrace();
             }
         }
+        memoryTracker.getOut().println("--------Instances---------");
+        memoryTracker.getOut().println("Num: " + String.format("%,d", maxSize));
+        memoryTracker.getOut().println("Time: " + String.format("%,d", (int) (System.currentTimeMillis() - start) / 1000) + "s");
+        memoryTracker.getOut().println("Maximum instances per second: " + String.format("%,d", (int) maxTime));
+        memoryTracker.getOut().println("Minimum instances per second: " + String.format("%,d", (int) minTime));
+        memoryTracker.getOut().println("Maximum memory allocated: " + String.format("%,d", maxMemory / 1024 / 1024) + " MB");
+        memoryTracker.getOut().println("Maximum memory used: " + String.format("%,d", maxUsedMemory / 1024 / 1024) + " MB");
+        memoryTracker.getOut().println("--------------------------");
+        logger.info("--------Instances---------");
+        logger.info("Num: " + String.format("%,d", maxSize));
+        logger.info("Time: " + String.format("%,d", (int) (System.currentTimeMillis() - start) / 1000) + "s");
+        logger.info("Maximum instances per second: " + String.format("%,d", (int) maxTime));
+        logger.info("Minimum instances per second: " + String.format("%,d", (int) minTime));
+        logger.info("Maximum memory allocated: " + String.format("%,d", maxMemory / 1024 / 1024) + " MB");
+        logger.info("Maximum memory used: " + String.format("%,d", maxUsedMemory / 1024 / 1024) + " MB");
+        logger.info("--------------------------");
     }
 
 

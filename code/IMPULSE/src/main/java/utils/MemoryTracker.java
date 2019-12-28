@@ -28,6 +28,9 @@ public class MemoryTracker implements IQuintListener {
     private long maxMemory = 0;
     private long maxUsedMemory = 0;
 
+    public PrintStream getOut() {
+        return out;
+    }
 
     public MemoryTracker(String output) {
         try {
@@ -58,11 +61,10 @@ public class MemoryTracker implements IQuintListener {
             maxUsedMemory = Math.max(maxUsedMemory, runtimeUsedMemory);
 
             logger.info("--------------------------------------");
-            logger.info("Quads count: " + n);
-            logger.info("Quads per second: " + instancesPerSecond);
-            logger.info("Max Memory: " + (runtimeMaxMemory / 1024 / 1024) + "MB");
-            logger.info("Used Memory: " + (runtimeUsedMemory / 1024 / 1024) + "MB");
-            logger.info("--------------------------------------");
+            logger.info("Quads count: " + String.format("%,d", n));
+            logger.info("Quads per second: " + String.format("%,d", (int) instancesPerSecond));
+            logger.info("Available Memory: " + String.format("%,d", runtimeMaxMemory / 1024 / 1024) + " MB");
+            logger.info("Used Memory: " + String.format("%,d", runtimeUsedMemory / 1024 / 1024) + " MB");
         }
     }
 
@@ -74,20 +76,20 @@ public class MemoryTracker implements IQuintListener {
     @Override
     public void finished() {
         out.println("--------Quads---------");
-        out.println("Num: " + n);
-        out.println("Time: " + (System.currentTimeMillis() - start) / 1000 + "s");
-        out.println("Maximum quads per second: " + maxTime);
-        out.println("Minimum quads per second: " + minTime);
-        out.println("Maximum memory allocated: " + (maxMemory / 1024 / 1024) + "MB");
-        out.println("Maximum memory used: " + (maxUsedMemory / 1024 / 1024) + "MB");
+        out.println("Num: " + String.format("%,d", n));
+        out.println("Time: " + String.format("%,d", (int) (System.currentTimeMillis() - start) / 1000) + "s");
+        out.println("Maximum quads per second: " + String.format("%,d", (int) maxTime));
+        out.println("Minimum quads per second: " + String.format("%,d", (int) minTime));
+        out.println("Maximum memory allocated: " + String.format("%,d", maxMemory / 1024 / 1024) + " MB");
+        out.println("Maximum memory used: " + String.format("%,d", maxUsedMemory / 1024 / 1024) + " MB");
         out.println("--------------------------");
         logger.info("--------Quads---------");
-        logger.info("Num: " + n);
-        logger.info("Time: " + (System.currentTimeMillis() - start) / 1000 + "s");
-        logger.info("Maximum quads per second: " + maxTime);
-        logger.info("Minimum quads per second: " + minTime);
-        logger.info("Maximum memory allocated: " + (maxMemory / 1024 / 1024) + "MB");
-        logger.info("Maximum memory used: " + (maxUsedMemory / 1024 / 1024) + "MB");
+        logger.info("Num: " + String.format("%,d", n));
+        logger.info("Time: " + String.format("%,d", (int) (System.currentTimeMillis() - start) / 1000) + "s");
+        logger.info("Maximum quads per second: " + String.format("%,d", (int) maxTime));
+        logger.info("Minimum quads per second: " + String.format("%,d", (int) minTime));
+        logger.info("Maximum memory allocated: " + String.format("%,d", maxMemory / 1024 / 1024) + " MB");
+        logger.info("Maximum memory used: " + String.format("%,d", maxUsedMemory / 1024 / 1024) + " MB");
         logger.info("--------------------------");
     }
 

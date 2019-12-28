@@ -96,7 +96,7 @@ public class FileQuadSource implements IQuintSource {
 
     @Override
     public void close() {
-        logger.info("Source Closed, processed " + counter + " quints");
+        logger.info("Source Closed, processed " + String.format("%,d", counter) + " quints");
         for (IQuintSourceListener i : listeners)
             i.sourceClosed();
 

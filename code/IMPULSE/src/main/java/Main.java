@@ -229,30 +229,34 @@ public class Main {
                 baseFolder + "datasources/seedlist_bibo_inferenced.csv.gz",
                 baseFolder + "mappings/bibo-mapping_inferenced.json", true, rdfInstanceCache,
                 outputDir + File.separator + "biboInferencedPLDHarvester-" + p + ".json");
-//
-//
-//        /*
-//            SWRC
-//         */
-//        //create swrc base simple harvester
-//        Harvester swrcBaseSimpleHarvester = createHarvester(baseFolder + "datasources/seedlist_swrc.csv.gz",
-//                baseFolder + "mappings/swrc-mapping.json", false, rdfInstanceCache,
-//                outputDir + File.separator + "swrcBaseSimpleHarvester-" + p + ".json");
-//
-//        //create swrc inferencing simple harvester
-//        Harvester swrcInferencedSimpleHarvester = createHarvester(baseFolder + "datasources/seedlist_swrc_inferenced.csv.gz",
-//                baseFolder + "mappings/swrc-mapping_inferenced.json", false, rdfInstanceCache,
-//                outputDir + File.separator + "swrcInferencedSimpleHarvester-" + p + ".json");
-//
-//        //create swrc base pld harvester
-//        Harvester swrcBasePLDHarvester = createHarvester(baseFolder + "datasources/seedlist_swrc.csv.gz",
-//                baseFolder + "mappings/swrc-mapping.json", true, rdfInstanceCache,
-//                outputDir + File.separator + "swrcBasePLDHarvester-" + p + ".json");
-//
-//        //create swrc inferencing pld harvester
-//        Harvester swrcInferencedPLDHarvester = createHarvester(baseFolder + "datasources/seedlist_swrc_inferenced.csv.gz",
-//                baseFolder + "mappings/swrc-mapping_inferenced.json", true, rdfInstanceCache,
-//                outputDir + File.separator + "swrcInferencedPLDHarvester-" + p + ".json");
+
+
+        /*
+            SWRC
+         */
+        //create swrc base simple harvester
+        Harvester swrcBaseSimpleHarvester = createHarvester("swrc base simple harvester",
+                baseFolder + "datasources/seedlist_swrc.csv.gz",
+                baseFolder + "mappings/swrc-mapping.json", false, rdfInstanceCache,
+                outputDir + File.separator + "swrcBaseSimpleHarvester-" + p + ".json");
+
+        //create swrc inferencing simple harvester
+        Harvester swrcInferencedSimpleHarvester = createHarvester("swrc inferencing simple harvester",
+                baseFolder + "datasources/seedlist_swrc_inferenced.csv.gz",
+                baseFolder + "mappings/swrc-mapping_inferenced.json", false, rdfInstanceCache,
+                outputDir + File.separator + "swrcInferencedSimpleHarvester-" + p + ".json");
+
+        //create swrc base pld harvester
+        Harvester swrcBasePLDHarvester = createHarvester("swrc base pld harvester",
+                baseFolder + "datasources/seedlist_swrc.csv.gz",
+                baseFolder + "mappings/swrc-mapping.json", true, rdfInstanceCache,
+                outputDir + File.separator + "swrcBasePLDHarvester-" + p + ".json");
+
+        //create swrc inferencing pld harvester
+        Harvester swrcInferencedPLDHarvester = createHarvester("swrc inferenced pld harvester",
+                baseFolder + "datasources/seedlist_swrc_inferenced.csv.gz",
+                baseFolder + "mappings/swrc-mapping_inferenced.json", true, rdfInstanceCache,
+                outputDir + File.separator + "swrcInferencedPLDHarvester-" + p + ".json");
 
         logger.info("Harvesting started ....");
         long startTime = System.currentTimeMillis();
@@ -265,22 +269,22 @@ public class Main {
 
 
 
-//        /*
-//            export some statistics
-//         */
-//        logger.info("swrcBaseSimple: " + swrcBaseSimpleHarvester.getParser().getStatisticsString());
-//        export(outputDir + File.separator + "swrcBaseSimple-" + p + "-stats.txt", swrcBaseSimpleHarvester.getParser().getStatisticsString());
-//        //---//
-//        logger.info("swrcInferencedSimple: " + swrcInferencedSimpleHarvester.getParser().getStatisticsString());
-//        export(outputDir + File.separator + "swrcInferencedSimple-" + p + "-stats.txt", swrcInferencedSimpleHarvester.getParser().getStatisticsString());
-//        //---//
-//        logger.info("swrcBasePLD: " + swrcBasePLDHarvester.getParser().getStatisticsString());
-//        export(outputDir + File.separator + "swrcBasePLD-" + p + "-stats.txt", swrcBasePLDHarvester.getParser().getStatisticsString());
-//        //---//
-//        logger.info("swrcInferencedPLD: " + swrcInferencedPLDHarvester.getParser().getStatisticsString());
-//        export(outputDir + File.separator + "swrcInferencedPLD-" + p + "-stats.txt", swrcInferencedPLDHarvester.getParser().getStatisticsString());
-//
-//
+        /*
+            export some statistics
+         */
+        logger.info("swrcBaseSimple: " + swrcBaseSimpleHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "swrcBaseSimple-" + p + "-stats.txt", swrcBaseSimpleHarvester.getParser().getStatisticsString());
+        //---//
+        logger.info("swrcInferencedSimple: " + swrcInferencedSimpleHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "swrcInferencedSimple-" + p + "-stats.txt", swrcInferencedSimpleHarvester.getParser().getStatisticsString());
+        //---//
+        logger.info("swrcBasePLD: " + swrcBasePLDHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "swrcBasePLD-" + p + "-stats.txt", swrcBasePLDHarvester.getParser().getStatisticsString());
+        //---//
+        logger.info("swrcInferencedPLD: " + swrcInferencedPLDHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "swrcInferencedPLD-" + p + "-stats.txt", swrcInferencedPLDHarvester.getParser().getStatisticsString());
+
+
         logger.info("biboBaseSimple: " + biboBaseSimpleHarvester.getParser().getStatisticsString());
         export(outputDir + File.separator + "biboBaseSimple-" + p + "-stats.txt", biboBaseSimpleHarvester.getParser().getStatisticsString());
         //---//

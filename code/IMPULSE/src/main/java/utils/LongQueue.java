@@ -1,7 +1,5 @@
 package main.java.utils;
 
-import main.java.common.interfaces.IResource;
-
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.Stack;
