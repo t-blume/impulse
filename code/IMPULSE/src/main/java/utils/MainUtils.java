@@ -15,6 +15,27 @@ import java.util.zip.GZIPInputStream;
 
 public class MainUtils {
 
+    public static String prettyPrintTimeStamp(long timestamp){
+        int hours = 0;          //3,600,000
+        int minutes = 0;        //60,000
+        int seconds = 0;        //1000
+
+        while(timestamp - 3600000 >= 0){
+            timestamp -= 3600000;
+            hours++;
+        }
+        while(timestamp - 60000 >= 0){
+            timestamp -= 60000;
+            minutes++;
+        }
+        while(timestamp - 1000 >= 0){
+            timestamp -= 1000;
+            seconds++;
+        }
+
+
+        return hours + "h " +  minutes + "m " + seconds + "s " + timestamp + "ms";
+    }
     /**
      * Extracts the outputfilename from the inputFiles
      *

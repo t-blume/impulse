@@ -16,7 +16,7 @@ import static main.java.utils.MainUtils.createFile;
 
 public class MemoryTracker implements IQuintListener {
     private static final Logger logger = LogManager.getLogger(MemoryTracker.class.getSimpleName());
-    private static final int loggingInterval = 50000;
+    private static final int loggingInterval = 500000;
     private PrintStream out;
     private long n = 0;
     private long lastTime = System.currentTimeMillis();

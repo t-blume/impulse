@@ -263,8 +263,9 @@ public class Main {
         //starting the source starts all machinery
         quintSource.start();
         long endTime = System.currentTimeMillis();
-        long time = ((endTime - startTime) / 1000) / 60;
-        logger.info("Harvesting took: " + time + " min");
+        long time = endTime - startTime;
+        logger.info("Kontrollsumme: " + time);
+        logger.info("Harvesting took: " + MainUtils.prettyPrintTimeStamp(time));
 
 
 
