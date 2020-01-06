@@ -189,6 +189,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
                 logger.info("Instance per second: " + String.format("%,d", (int) instancesPerSecond));
                 logger.info("Available Memory: " + String.format("%,d", runtimeMaxMemory / 1024 / 1024) + " MB");
                 logger.info("Used Memory: " + String.format("%,d", runtimeUsedMemory / 1024 / 1024) + " MB");
+                memoryTracker.getOut().println(String.format("%,d", (int) (System.currentTimeMillis() - start) / 1000) + "s instance count " + String.format("%,d", maxSize));
             }
         }
         //add element to memory, dump something to disk if necessary
