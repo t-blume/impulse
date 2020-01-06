@@ -172,8 +172,8 @@ public class Main {
         InstanceAggregator instanceAggregatorContext = new InstanceAggregator(rdfInstanceCache);
         preProcessingPipeline.registerQuintListener(instanceAggregatorContext);
 
-        MemoryTracker memoryTracker = new MemoryTracker("stats");
-        preProcessingPipeline.registerQuintListener(memoryTracker);
+//        MemoryTracker memoryTracker = new MemoryTracker("stats");
+//        preProcessingPipeline.registerQuintListener(memoryTracker);
 
         /*
             DCTERMS

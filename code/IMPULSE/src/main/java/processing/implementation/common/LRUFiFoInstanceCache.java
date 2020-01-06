@@ -23,7 +23,7 @@ import static main.java.utils.MainUtils.deleteDirectory;
 public class LRUFiFoInstanceCache<T extends ILocatable> implements
         IElementCache<T> {
     private static final Logger logger = LogManager.getLogger(LRUFiFoInstanceCache.class.getSimpleName());
-    private static final int loggingInterval = 50000;
+    private static final int loggingInterval = 0000000;
 
     private static final int DISK_CACHE_FOLDER_DEPTH = 2;
     //location where to store elements that do no fit in main memory
@@ -142,21 +142,11 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
     private void put(T i) {
         // if memory is full -> move eldest entry to disk
         synchronized (sync) {
-            try {
-                if (memoryCachedElements.size() >= capacity)
-                    removeEldest();
+            if (memoryCachedElements.size() >= capacity)
+                removeEldest();
 
-                //finally, add new element to cache
-                memoryCachedElements.put(i.getLocator(), i);
-            } catch (OutOfMemoryError e) {
-                //TODO: handle memory leak
-                for (int j = 0; j < 1000; j++)
-                    removeEldest();
-
-                logger.warn("Ran out of memory, adjusting cache size. Old: %,d%n, New: %,d%n", this.capacity, memoryCachedElements.size());
-                this.capacity = memoryCachedElements.size();
-                memoryCachedElements.put(i.getLocator(), i);
-            }
+            //finally, add new element to cache
+            memoryCachedElements.put(i.getLocator(), i);
         }
     }
 
@@ -180,26 +170,26 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
             addToQueue(i.getLocator());
             //increase total counter
             maxSize++;
-//            if (maxSize % loggingInterval == 0) {
-//                long currentTime = System.currentTimeMillis();
-//                long delta = currentTime - lastTime;
-//                lastTime = currentTime;
-//                double instancesPerSecond = (100000.0 / delta * 1000.0);
-//                maxTime = Math.max(instancesPerSecond, maxTime);
-//                minTime = Math.min(instancesPerSecond, minTime);
-//
-//                long runtimeMaxMemory = memoryTracker.getCurrentlyMaxMemory();
-//                long runtimeUsedMemory = memoryTracker.getReallyUsedMemory();
-//
-//                maxMemory = Math.max(runtimeMaxMemory, maxMemory);
-//                maxUsedMemory = Math.max(maxUsedMemory, runtimeUsedMemory);
-//
-//                logger.info("--------------------------------------");
-//                logger.info("Instance count: " + String.format("%,d", maxSize));
-//                logger.info("Instance per second: " + String.format("%,d", (int) instancesPerSecond));
-//                logger.info("Available Memory: " + String.format("%,d", runtimeMaxMemory / 1024 / 1024) + " MB");
-//                logger.info("Used Memory: " + String.format("%,d", runtimeUsedMemory / 1024 / 1024) + " MB");
-//            }
+            if (maxSize % loggingInterval == 0) {
+                long currentTime = System.currentTimeMillis();
+                long delta = currentTime - lastTime;
+                lastTime = currentTime;
+                double instancesPerSecond = ((double) loggingInterval / delta * 1000.0);
+                maxTime = Math.max(instancesPerSecond, maxTime);
+                minTime = Math.min(instancesPerSecond, minTime);
+
+                long runtimeMaxMemory = memoryTracker.getCurrentlyMaxMemory();
+                long runtimeUsedMemory = memoryTracker.getReallyUsedMemory();
+
+                maxMemory = Math.max(runtimeMaxMemory, maxMemory);
+                maxUsedMemory = Math.max(maxUsedMemory, runtimeUsedMemory);
+
+                logger.info("--------------------------------------");
+                logger.info("Instance count: " + String.format("%,d", maxSize));
+                logger.info("Instance per second: " + String.format("%,d", (int) instancesPerSecond));
+                logger.info("Available Memory: " + String.format("%,d", runtimeMaxMemory / 1024 / 1024) + " MB");
+                logger.info("Used Memory: " + String.format("%,d", runtimeUsedMemory / 1024 / 1024) + " MB");
+            }
         }
         //add element to memory, dump something to disk if necessary
         put(i);

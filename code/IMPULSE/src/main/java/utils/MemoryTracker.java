@@ -50,7 +50,7 @@ public class MemoryTracker implements IQuintListener {
             long currentTime = System.currentTimeMillis();
             long delta = currentTime - lastTime;
             lastTime = currentTime;
-            double instancesPerSecond = (loggingInterval / delta * 1000.0);
+            double instancesPerSecond = ((double) loggingInterval / delta * 1000.0);
             maxTime = Math.max(instancesPerSecond, maxTime);
             minTime = Math.min(instancesPerSecond, minTime);
 
@@ -59,7 +59,6 @@ public class MemoryTracker implements IQuintListener {
 
             maxMemory = Math.max(runtimeMaxMemory, maxMemory);
             maxUsedMemory = Math.max(maxUsedMemory, runtimeUsedMemory);
-
             logger.info("--------------------------------------");
             logger.info("Quads count: " + String.format("%,d", n));
             logger.info("Quads per second: " + String.format("%,d", (int) instancesPerSecond));
