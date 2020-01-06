@@ -50,7 +50,7 @@ public class MemoryTracker implements IQuintListener {
             long currentTime = System.currentTimeMillis();
             long delta = currentTime - lastTime;
             lastTime = currentTime;
-            double instancesPerSecond = (100000.0 / delta * 1000.0);
+            double instancesPerSecond = (loggingInterval / delta * 1000.0);
             maxTime = Math.max(instancesPerSecond, maxTime);
             minTime = Math.min(instancesPerSecond, minTime);
 
