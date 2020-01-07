@@ -60,14 +60,13 @@ public class InstanceAggregator implements IQuintListener {
             element.addIncomingQuint(quint);
 
         window.add(element);
-        if (element.getOutgoingQuints().size() % 10000 == 0) {
+        if (element.getOutgoingQuints().size() % 100000 == 0) {
             if (!largeInstances.containsKey(element.getLocator())) {
                 logger.debug("------------------------");
                 logger.debug("Large Instance: " + element.getLocator() + " has size: " + element.getOutgoingQuints().size());
                 largeInstances.put(element.getLocator(), element.getOutgoingQuints().size());
                 MemoryTracker memoryTracker = new MemoryTracker();
                 logger.info("Used Memory: " + String.format("%,d", memoryTracker.getReallyUsedMemory() / 1024 / 1024) + " MB");
-                logger.debug("------------------------");
             } else
                 largeInstances.put(element.getLocator(), largeInstances.get(element.getLocator()) + 1);
 
