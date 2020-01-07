@@ -23,8 +23,8 @@ import static main.java.utils.MainUtils.deleteDirectory;
 public class LRUFiFoInstanceCache<T extends ILocatable> implements
         IElementCache<T> {
     private static final Logger logger = LogManager.getLogger(LRUFiFoInstanceCache.class.getSimpleName());
-    private static final int loggingInterval = 100000;
-    private static final int memoryLoggingInterval = 1000000;
+    private static final int loggingInterval = 1000000;
+    private static final int memoryLoggingInterval = 10000000;
 
     private static final int DISK_CACHE_FOLDER_DEPTH = 2;
     //location where to store elements that do no fit in main memory
