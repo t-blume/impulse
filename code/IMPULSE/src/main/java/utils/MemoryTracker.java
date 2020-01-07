@@ -16,7 +16,7 @@ import static main.java.utils.MainUtils.createFile;
 
 public class MemoryTracker implements IQuintListener {
     private static final Logger logger = LogManager.getLogger(MemoryTracker.class.getSimpleName());
-    private static final int loggingInterval = 50000000;
+    private int loggingInterval = 50000000;
     private PrintStream out;
     private long n = 0;
     private long lastTime = System.currentTimeMillis();
@@ -32,13 +32,17 @@ public class MemoryTracker implements IQuintListener {
         return out;
     }
 
-    public MemoryTracker(String output) {
+    public MemoryTracker(){
+        out = System.out;
+    }
+    public MemoryTracker(String output, int loggingInterval) {
         try {
             out = new PrintStream(new FileOutputStream(createFile(output + File.separator + "memory-tracker.txt")));
         } catch (FileNotFoundException e) {
             logger.warn("Cannot create output stream to " + output + File.separator + "memory-tracker.txt\n Using system out instead.");
             out = System.out;
         }
+        this.loggingInterval = loggingInterval;
     }
 
 
@@ -64,6 +68,7 @@ public class MemoryTracker implements IQuintListener {
             logger.info("Quads per second: " + String.format("%,d", (int) instancesPerSecond));
             logger.info("Available Memory: " + String.format("%,d", runtimeMaxMemory / 1024 / 1024) + " MB");
             logger.info("Used Memory: " + String.format("%,d", runtimeUsedMemory / 1024 / 1024) + " MB");
+
         }
     }
 

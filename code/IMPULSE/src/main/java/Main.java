@@ -71,7 +71,7 @@ public class Main {
         memoryCacheSize.setArgName("int");
         options.addOption(memoryCacheSize);
         ////////////
-        Option deleteDiskCache = new Option("ddc", "deleteDiskCache", false, "Deletes the disk cache after processing. Caution, manually deleting in OS faster.");
+        Option deleteDiskCache = new Option("dc", "diskcache", true, "Use the disk cache for processing.");
         options.addOption(deleteDiskCache);
         ///////////////////////////////////////////////////////////////////
         // read mapping and query
@@ -152,7 +152,7 @@ public class Main {
         }
     }
 
-    private static void runFullExperiment(String baseFolder, List<String> inputFiles, int cacheSize, String outputDir, boolean deleteDiskCache) throws IOException {
+    private static void runFullExperiment(String baseFolder, List<String> inputFiles, int cacheSize, String outputDir, String diskCache) throws IOException {
         //extract actual file name (without parent folders)
         String p = getFileName(inputFiles);
 
@@ -168,12 +168,12 @@ public class Main {
         // all quints have to pass the pre-processing pipeline
         quintSource.registerQuintListener(preProcessingPipeline);
         //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
-        IElementCache<IInstanceElement> rdfInstanceCache = new LRUFiFoInstanceCache<>(cacheSize, "disk-cache2", deleteDiskCache);
+        IElementCache<IInstanceElement> rdfInstanceCache = new LRUFiFoInstanceCache<>(cacheSize, diskCache, true);
         InstanceAggregator instanceAggregatorContext = new InstanceAggregator(rdfInstanceCache);
         preProcessingPipeline.registerQuintListener(instanceAggregatorContext);
 
-//        MemoryTracker memoryTracker = new MemoryTracker("stats");
-//        preProcessingPipeline.registerQuintListener(memoryTracker);
+        MemoryTracker memoryTracker = new MemoryTracker("stats", 50000000);
+        preProcessingPipeline.registerQuintListener(memoryTracker);
 
         /*
             DCTERMS
@@ -310,6 +310,11 @@ public class Main {
         //---//
         logger.info("dcTermsInferencedPLD: " + dcTermsInferencedPLDHarvester.getParser().getStatisticsString());
         export(outputDir + File.separator + "dcTermsInferencedPLD-" + p + "-stats.txt", dcTermsInferencedPLDHarvester.getParser().getStatisticsString());
+
+
+        //delete cache
+        logger.debug("Deleting cache...");
+        rdfInstanceCache.flush();
     }
 
 
@@ -376,12 +381,15 @@ public class Main {
         final String finalRegex = regexFileFilter;
         FileFilter fileFilter = (pathname) -> (pathname != null ? pathname.toString().matches(finalRegex) : false);
 
+        String diskcacheFolder = "disk-cache";
+        if(cmd.hasOption("dc"))
+            diskcacheFolder = cmd.getOptionValue("dc");
 
         if(cmd.hasOption("fe")){
             //run full experiment
             String baseFolder = "../";
             baseFolder = cmd.getOptionValue("fe");
-            runFullExperiment(baseFolder, inputFiles, cacheSize, outputDir, cmd.hasOption("ddc"));
+            runFullExperiment(baseFolder, inputFiles, cacheSize, outputDir, diskcacheFolder);
             return;
         }
 

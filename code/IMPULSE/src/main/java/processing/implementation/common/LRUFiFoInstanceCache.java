@@ -23,7 +23,8 @@ import static main.java.utils.MainUtils.deleteDirectory;
 public class LRUFiFoInstanceCache<T extends ILocatable> implements
         IElementCache<T> {
     private static final Logger logger = LogManager.getLogger(LRUFiFoInstanceCache.class.getSimpleName());
-    private static final int loggingInterval = 5000000;
+    private static final int loggingInterval = 100000;
+    private static final int memoryLoggingInterval = 1000000;
 
     private static final int DISK_CACHE_FOLDER_DEPTH = 2;
     //location where to store elements that do no fit in main memory
@@ -39,7 +40,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
     //maximum number of elements actually stored in memory/disk
     private long maxSize = 0;
-    private MemoryTracker memoryTracker = new MemoryTracker("stats2");
+    private MemoryTracker memoryTracker = new MemoryTracker("stats2", memoryLoggingInterval);
 
     //flush elements to each listener afterwards
     private List<IElementCacheListener> listeners;
@@ -131,9 +132,6 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
     private void removeEldest() {
         T eldestElement = memoryCachedElements.getEldestEntry().getValue();
-        if (size() % loggingInterval == 0)
-            System.out.format("Instances parsed: %08d    \r", size());
-
         //do not delete old element but store on disk
         saveToDisk(eldestElement);
         memoryCachedElements.remove(eldestElement.getLocator());
@@ -147,6 +145,13 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
             //finally, add new element to cache
             memoryCachedElements.put(i.getLocator(), i);
+            if(size() % loggingInterval == 0) {
+                logger.info("--------------------------------------");
+                logger.debug("Instances parsed: " + String.format("%,d", size()));
+                logger.debug("Memory cached files: " + String.format("%,d", memoryCachedElements.size()));
+                logger.debug("Queue Size: " + String.format("%,d", fifoQueue.size()));
+                //System.out.format("Instances parsed: %08d    \r", size());
+            }
         }
     }
 
@@ -170,11 +175,11 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
             addToQueue(i.getLocator());
             //increase total counter
             maxSize++;
-            if (maxSize % loggingInterval == 0) {
+            if (maxSize % memoryLoggingInterval == 0) {
                 long currentTime = System.currentTimeMillis();
                 long delta = currentTime - lastTime;
                 lastTime = currentTime;
-                double instancesPerSecond = ((double) loggingInterval / delta * 1000.0);
+                double instancesPerSecond = ((double) memoryLoggingInterval / delta * 1000.0);
                 maxTime = Math.max(instancesPerSecond, maxTime);
                 minTime = Math.min(instancesPerSecond, minTime);
 
@@ -184,7 +189,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
                 maxMemory = Math.max(runtimeMaxMemory, maxMemory);
                 maxUsedMemory = Math.max(maxUsedMemory, runtimeUsedMemory);
 
-                logger.info("--------------------------------------");
+                logger.info("______________________________________");
                 logger.info("Instance count: " + String.format("%,d", maxSize));
                 logger.info("Instance per second: " + String.format("%,d", (int) instancesPerSecond));
                 logger.info("Available Memory: " + String.format("%,d", runtimeMaxMemory / 1024 / 1024) + " MB");
@@ -250,8 +255,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
         T res = null;
         File file = new File(hashToFilename(resource.hashCode()));
         if (file.exists()) {
-            try {
-                ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
+            try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
                 res = (T) ois.readObject();
                 ois.close();
             } catch (IOException e) {
@@ -265,8 +269,7 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
     private void saveToDisk(T element) {
         File file = new File(hashToFilename(element.getLocator().hashCode()));
-        try {
-            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file));
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))){
             oos.writeObject(element);
             oos.close();
         } catch (IOException e) {

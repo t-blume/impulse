@@ -226,6 +226,7 @@ public class MainUtils {
     }
 
     public static void deleteDirectory(String dirname){
+        System.out.println("Deleting " + dirname);
         File tmpFolder = new File(dirname);
         String[] entries = tmpFolder.list();
         for (String s : entries) {

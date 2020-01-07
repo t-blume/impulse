@@ -15,7 +15,7 @@ import java.util.List;
  */
 public class FileJSONSink implements IJsonSink {
     private static final Logger logger = LogManager.getLogger(FileJSONSink.class.getSimpleName());
-    private static final int logger_interval = 1000;
+    private static final int logger_interval = 10000;
 
     private final PrintStream pw;
     private int count = 0;
