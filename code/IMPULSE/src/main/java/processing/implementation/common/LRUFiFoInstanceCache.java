@@ -145,13 +145,6 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
 
             //finally, add new element to cache
             memoryCachedElements.put(i.getLocator(), i);
-            if(size() % loggingInterval == 0) {
-                logger.info("--------------------------------------");
-                logger.debug("Instances parsed: " + String.format("%,d", size()));
-                logger.debug("Memory cached files: " + String.format("%,d", memoryCachedElements.size()));
-                logger.debug("Queue Size: " + String.format("%,d", fifoQueue.size()));
-                //System.out.format("Instances parsed: %08d    \r", size());
-            }
         }
     }
 
@@ -175,6 +168,14 @@ public class LRUFiFoInstanceCache<T extends ILocatable> implements
             addToQueue(i.getLocator());
             //increase total counter
             maxSize++;
+            if(size() % loggingInterval == 0) {
+                logger.debug("--------------------------------------");
+                logger.debug("Instances parsed: " + String.format("%,d", size()));
+                logger.debug("Memory cached files: " + String.format("%,d", memoryCachedElements.size()));
+                logger.debug("Queue Size: " + String.format("%,d", fifoQueue.size()));
+                //System.out.format("Instances parsed: %08d    \r", size());
+            }
+
             if (maxSize % memoryLoggingInterval == 0) {
                 long currentTime = System.currentTimeMillis();
                 long delta = currentTime - lastTime;

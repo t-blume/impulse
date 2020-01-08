@@ -23,6 +23,7 @@ import java.util.Map;
  */
 public class InstanceAggregator implements IQuintListener {
     private static final Logger logger = LogManager.getLogger(InstanceAggregator.class.getSimpleName());
+    private MemoryTracker memoryTracker = new MemoryTracker();
 
     private Map<IResource, Integer> largeInstances = new HashMap<>();
     private IElementCache<IInstanceElement> window;
@@ -65,7 +66,6 @@ public class InstanceAggregator implements IQuintListener {
                 logger.debug("------------------------");
                 logger.debug("Large Instance: " + element.getLocator() + " has size: " + element.getOutgoingQuints().size());
                 largeInstances.put(element.getLocator(), element.getOutgoingQuints().size());
-                MemoryTracker memoryTracker = new MemoryTracker();
                 logger.info("Used Memory: " + String.format("%,d", memoryTracker.getReallyUsedMemory() / 1024 / 1024) + " MB");
             } else
                 largeInstances.put(element.getLocator(), largeInstances.get(element.getLocator()) + 1);
