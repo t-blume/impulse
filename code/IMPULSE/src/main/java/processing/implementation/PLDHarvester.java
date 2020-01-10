@@ -39,7 +39,7 @@ public class PLDHarvester extends ContextHarvester implements IElementCacheListe
         IInstanceElement filteredInstance = new RDFInstance(iInstanceElement.getLocator());
         for (IQuint quint : iInstanceElement.getOutgoingQuints()) {
             try {
-                if (contexts.contains(MainUtils.extractPLD(MainUtils.normalizeURL(quint.getContext().toString()))))
+                if (contexts.contains(MainUtils.extractPLD(MainUtils.normalizeURL(quint.getContext()))))
                     filteredInstance.addOutgoingQuint(quint);
                 else
                     filteredQuads++;

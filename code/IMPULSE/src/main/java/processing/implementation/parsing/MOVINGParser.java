@@ -5,18 +5,12 @@ import com.joestelmach.natty.Parser;
 import javatools.parsers.Name;
 import main.java.common.data.model.*;
 import main.java.common.implementation.Mapping;
-import main.java.common.implementation.NodeResource;
-import main.java.common.implementation.RDFInstance;
-import main.java.common.implementation.TypedResource;
 import main.java.common.interfaces.IInstanceElement;
 import main.java.common.interfaces.IQuint;
-import main.java.common.interfaces.IResource;
 import main.java.processing.implementation.Harvester;
 import main.java.utils.DataCleansing;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.semanticweb.yars.nx.BNode;
-import org.semanticweb.yars.nx.Literal;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -190,65 +184,64 @@ public class MOVINGParser {
     //////////////////////////////////////////////////////////////////
 
     private void parseComplexConcept(IQuint quint, DataItem dataItem) throws URISyntaxException {
-        if (quint.getObject() instanceof NodeResource) {
-            if (dataItem.getKeywords() == null)
-                dataItem.setKeywords(new HashSet<>());
 
-            if (dataItem.getConcepts() == null)
-                dataItem.setConcepts(new HashSet<>());
 
-            NodeResource nr = (NodeResource) quint.getObject();
+        if (dataItem.getKeywords() == null)
+            dataItem.setKeywords(new HashSet<>());
 
-            //First Case if object is literal add label to keywords
-            // if (quint.getObject().toString().matches("\".*\"(@[a-z]+)?")) {
-            if (nr.getNode() instanceof Literal) {
-                Concept keywords = new Concept();
-                String keywordString = quint.getObject().toString();
-                keywords.setLabel(keywordString);
+        if (dataItem.getConcepts() == null)
+            dataItem.setConcepts(new HashSet<>());
 
-                String[] parts = keywordString.split(" ");
-                for (int i = 0; i < parts.length; i++)
-                    dataItem.getKeywords().add(dataCleansing.cleanse(parts[i]));
-            } else {
-                //Second Case if object is and URI get URI from InstanceCache and Parse Label
-                IResource targetInstanceLocator = new TypedResource(quint.getObject(), RDFInstance.RESOURCE_TYPE);
-                IInstanceElement objectElement = harvester.getInstance(targetInstanceLocator);
-                if (objectElement != null) {
-                    Concept concept = new Concept();
-                    try {
-                        URI objectURI = new URI(editStrings(objectElement.getLocator().toString()));
-                        concept.setURL(objectURI);
-                    } catch (URISyntaxException e) {
-                        logger.warn(e.getMessage());
-                    }
-                    for (IQuint objectQuint : objectElement.getOutgoingQuints()) {
-                        URI objectProperty = new URI(editStrings(objectQuint.getPredicate().toString()));
-                        String[] alternatives = convertJSONArray2StringArray(
-                                mapping.getMappings().getJSONObject("metadata_concept_mapping")
-                                        .getJSONArray("rawName"));
-                        if (contains(alternatives, objectProperty.toString())) {
-                            concept.setLabel(dataCleansing.cleanse(objectQuint.getObject().toString()));
-                            continue;
-                        }
-                    }
-                    dataItem.getConcepts().add(concept);
-                } else {
-                    //Third Case, Resource is not in Cache. Download Resource
-                    missingConcept++;
+
+        //First Case if object is literal add label to keywords
+        // if (quint.getObject().toString().matches("\".*\"(@[a-z]+)?")) {
+        if (!isURI(quint.getObject())) {
+            Concept keywords = new Concept();
+            String keywordString = quint.getObject().toString();
+            keywords.setLabel(keywordString);
+
+            String[] parts = keywordString.split(" ");
+            for (int i = 0; i < parts.length; i++)
+                dataItem.getKeywords().add(dataCleansing.cleanse(parts[i]));
+        } else {
+            //Second Case if object is and URI get URI from InstanceCache and Parse Label
+            Integer targetInstanceLocator = quint.getObject().hashCode();
+            IInstanceElement objectElement = harvester.getInstance(targetInstanceLocator);
+            if (objectElement != null) {
+                Concept concept = new Concept();
+                try {
+                    URI objectURI = new URI(editStrings(quint.getObject()));
+                    concept.setURL(objectURI);
+                } catch (URISyntaxException e) {
+                    logger.warn(e.getMessage());
                 }
+                for (IQuint objectQuint : objectElement.getOutgoingQuints()) {
+                    URI objectProperty = new URI(editStrings(objectQuint.getPredicate()));
+                    String[] alternatives = convertJSONArray2StringArray(
+                            mapping.getMappings().getJSONObject("metadata_concept_mapping")
+                                    .getJSONArray("rawName"));
+                    if (contains(alternatives, objectProperty.toString())) {
+                        concept.setLabel(dataCleansing.cleanse(objectQuint.getObject()));
+                        continue;
+                    }
+                }
+                dataItem.getConcepts().add(concept);
+            } else {
+                //Third Case, Resource is not in Cache. Download Resource
+                missingConcept++;
             }
         }
+
     }
 
     private void parseComplexVenue(IQuint quint, DataItem dataItem) throws URISyntaxException {
-        if (quint.getObject() instanceof NodeResource) {
-            NodeResource nr = (NodeResource) quint.getObject();
-            if (nr.getNode() instanceof Literal) {
+
+            if (!isURI(quint.getObject())) {
                 MetadataVenue venue = new MetadataVenue();
-                parseVenueName(quint.getObject().toString(), venue);
+                parseVenueName(quint.getObject(), venue);
                 dataItem.setMetadataVenue(venue);
             } else {
-                IResource targetInstanceLocator = new TypedResource(quint.getObject(), RDFInstance.RESOURCE_TYPE);
+                Integer targetInstanceLocator = quint.getObject().hashCode();
                 IInstanceElement objectElement = harvester.getInstance(targetInstanceLocator);
 
                 if (objectElement != null) {
@@ -256,23 +249,23 @@ public class MOVINGParser {
                     try {
                         //Check if Subject is a BNode
                         venue.setURIs(new HashSet<>());
-                        if (editStrings(nr.getNode().toString()).startsWith("_:")) {
-                            venue.getURIs().add(new URI(editStrings(quint.getContext().toString())));
-                        } else {
-                            URI objectURI = new URI(editStrings(objectElement.getLocator().toString()));
+                        if (editStrings(quint.getContext()).startsWith("_:"))
+                            venue.getURIs().add(new URI(editStrings(quint.getContext())));
+                        else {
+                            URI objectURI = new URI(editStrings(quint.getObject()));
                             venue.getURIs().add(objectURI);
                         }
                     } catch (URISyntaxException e) {
                         logger.warn(e.getMessage());
                     }
                     for (IQuint objectQuint : objectElement.getOutgoingQuints()) {
-                        URI objectProperty = new URI(editStrings(objectQuint.getPredicate().toString()));
+                        URI objectProperty = new URI(editStrings(objectQuint.getPredicate()));
 
                         String[] alternatives = convertJSONArray2StringArray(
                                 mapping.getMappings().getJSONObject("metadata_venue_mapping")
                                         .getJSONArray("rawName"));
                         if (contains(alternatives, objectProperty.toString())) {
-                            parseVenueName(objectQuint.getObject().toString(), venue);
+                            parseVenueName(objectQuint.getObject(), venue);
                             continue;
                         }
                         alternatives = convertJSONArray2StringArray(
@@ -287,7 +280,7 @@ public class MOVINGParser {
                                         .getJSONArray("location"));
 
                         if (contains(alternatives, objectProperty.toString())) {
-                            parseLocation(quint.getObject().toString(), dataItem.getMetadataVenue());
+                            parseLocation(quint.getObject(), dataItem.getMetadataVenue());
                         }
                     }
                     dataItem.setMetadataVenue(venue);
@@ -295,48 +288,25 @@ public class MOVINGParser {
                     missingVenue++;
                 }
             }
-        }
+
     }
 
 
     private void parseComplexPerson(IQuint quint, DataItem dataItem) {
         HashSet<MetadataPerson> metadataPeople = new HashSet<>();
-        if (quint.getObject() instanceof NodeResource) {
-            NodeResource nr = (NodeResource) quint.getObject();
+
             //Simple Case: links to a literal:
-            if (nr.getNode() instanceof Literal) {
-                Set<MetadataPerson> personSet = parseAuthorNames(quint, quint.getObject().toString());
+            if (!isURI(quint.getObject())) {
+                Set<MetadataPerson> personSet = parseAuthorNames(quint, quint.getObject());
                 if (dataItem.getMetadataPersons() == null)
                     dataItem.setMetadataPersons(new HashSet<>());
 
                 // add authors, contributors
                 dataItem.getMetadataPersons().addAll(personSet);
                 //Blanknode handling
-            } else if (nr.getNode() instanceof BNode) {
-                IResource targetInstanceLocator = new TypedResource(quint.getObject(), RDFInstance.RESOURCE_TYPE);
-                IInstanceElement objectElement = harvester.getInstance(targetInstanceLocator);
-                boolean organisation = quint.getObject().toString().contains("organization");
-                try {
-                    harvester.getInstance(objectElement.getLocator()).getOutgoingQuints().forEach(x -> {
-                        if (x.getObject() instanceof NodeResource) {
-                            IResource targetInstanceLocator2 = new TypedResource(x.getObject(), RDFInstance.RESOURCE_TYPE);
-                            IInstanceElement objectElement2 = harvester.getInstance(targetInstanceLocator2);
-                            if (objectElement2 != null) {
-                                for (IQuint objectQuint : objectElement2.getOutgoingQuints()) {
-                                    MetadataPerson metadataPerson = extractPersons(objectQuint, organisation);
-                                    if (metadataPerson != null)
-                                        metadataPeople.add(metadataPerson);
-                                }
-                            }
-                        }
-                    });
-                } catch (NullPointerException e) {
-                    e.printStackTrace();
-                }
-                //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            } else {
+            }else {
                 //complex case, the object is again a URI with properties etc.
-                IResource targetInstanceLocator = new TypedResource(quint.getObject(), RDFInstance.RESOURCE_TYPE);
+                Integer targetInstanceLocator = quint.getObject().hashCode();
                 IInstanceElement objectElement = harvester.getInstance(targetInstanceLocator);
                 if (objectElement != null) {
                     //FIXME: quick hax
@@ -344,7 +314,7 @@ public class MOVINGParser {
                     MetadataPerson metadataPerson = new MetadataPerson();
                     MetadataOrganisation metadataOrganisation = new MetadataOrganisation();
                     try {
-                        URI objectURI = new URI(editStrings(objectElement.getLocator().toString()));
+                        URI objectURI = new URI(editStrings(quint.getObject()));
                         boolean found = false;
 
                         if (dataItem.getMetadataOrganisations() != null) {
@@ -359,7 +329,7 @@ public class MOVINGParser {
                         //Check if subject is a BNode
                         metadataOrganisation.setURIs(new HashSet<>());
                         if (!found) {
-                            if (editStrings(nr.getNode().toString()).startsWith("_:")) {
+                            if (editStrings(quint.getObject()).startsWith("_:")) {
                                 metadataOrganisation.getURIs().add(new URI(editStrings(quint.getContext().toString())));
                             } else {
                                 metadataOrganisation.getURIs().add(objectURI);
@@ -378,7 +348,7 @@ public class MOVINGParser {
                         if (!found) {
                             //Check if subject is a BNode
                             metadataPerson.setURIs(new HashSet<>());
-                            if (editStrings(nr.getNode().toString()).startsWith("_:")) {
+                            if (editStrings(quint.getObject()).startsWith("_:")) {
                                 metadataPerson.getURIs().add(new URI(editStrings(quint.getContext().toString())));
                             } else {
                                 metadataPerson.getURIs().add(objectURI);
@@ -391,7 +361,7 @@ public class MOVINGParser {
                     for (IQuint objectQuint : objectElement.getOutgoingQuints()) {
                         //Check if Quintobject is an URI
                         if (objectQuint.getObject().toString().startsWith("http")) {
-                            IResource targetInstanceLocator2 = new TypedResource(objectQuint.getObject(), RDFInstance.RESOURCE_TYPE);
+                            Integer targetInstanceLocator2 = objectQuint.getObject().hashCode();
                             IInstanceElement objectElement2 = harvester.getInstance(targetInstanceLocator2);
                             if (objectElement2 != null) {
                                 for (IQuint objectQuint2 : objectElement2.getOutgoingQuints()) {
@@ -411,7 +381,7 @@ public class MOVINGParser {
                     missingPerson++;
                 }
             }
-        }
+
         dataItem.setMetadataPersons(metadataPeople);
     }
 

@@ -1,14 +1,11 @@
 package main.java.processing.implementation.preprocessing;
 
 
-import main.java.common.implementation.NodeResource;
 import main.java.common.implementation.Quad;
 import main.java.common.interfaces.IQuint;
-import main.java.common.interfaces.IResource;
 import main.java.processing.interfaces.IQuintProcessor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.semanticweb.yars.nx.Resource;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -36,15 +33,15 @@ public class FixBNodes implements IQuintProcessor {
 
         //It is an older code, Sir, but it checks out
         if (tryFix) {
-            NodeResource c = (NodeResource) q.getContext();
-            NodeResource s = (NodeResource) q.getSubject();
-            NodeResource p = (NodeResource) q.getPredicate();
-            NodeResource o = (NodeResource) q.getObject();
+            String c = q.getContext();
+            String s = q.getSubject();
+            String p = q.getPredicate();
+            String o = q.getObject();
 
-            IResource context = deanon(c, new NodeResource(new Resource(prefix)));
-            IResource subject = deanon(s, c);
-            IResource predicate = deanon(p, c);
-            IResource object = deanon(o, c);
+            String context = deanon(c, prefix);
+            String subject = deanon(s, c);
+            String predicate = deanon(p, c);
+            String object = deanon(o, c);
 
             IQuint fixedQuint = new Quad(subject, predicate, object, context);
             quints.add(fixedQuint);
@@ -54,10 +51,10 @@ public class FixBNodes implements IQuintProcessor {
         return quints;
     }
 
-    private IResource deanon(NodeResource resource, IResource context) {
+    private String deanon(String resource, String context) {
         String resourceText = resource.toString();
 
-        if (resource.getNode().toString().startsWith("<_:")){
+        if (resource.startsWith("<_:")) {
             String newPrefix;
             if (context != null) {
                 newPrefix = context.toString();
@@ -74,7 +71,7 @@ public class FixBNodes implements IQuintProcessor {
             //remove possible blank node prefix
             resourceText = resourceText.replaceAll("_:", "");
             fixedBlankNodes++;
-            return new NodeResource(new Resource(newPrefix + resourceText));
+            return newPrefix + resourceText;
         } else
             return resource;
     }
@@ -93,14 +90,14 @@ public class FixBNodes implements IQuintProcessor {
     }
 
 
-    private IResource fixLiteral(IResource l) {
-        if (!l.toN3().matches("\".*\"(@[a-z]+)?")) {
-            String test = l.toN3();
+    private String fixLiteral(String l) {
+        if (!l.matches("\".*\"(@[a-z]+)?")) {
+            String test = l;
             if (test.contains("@")) {
                 int index = test.indexOf("@");
                 test = test.substring(0, index);
             }
-            return new NodeResource(new Resource("<" + l.toString() + ">"));
+            return "<" + l.toString() + ">";
         }
         return null;
     }

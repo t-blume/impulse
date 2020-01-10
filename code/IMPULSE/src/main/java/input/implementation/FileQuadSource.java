@@ -1,6 +1,5 @@
 package main.java.input.implementation;
 
-import main.java.common.implementation.NodeResource;
 import main.java.common.implementation.Quad;
 import main.java.common.interfaces.IQuint;
 import main.java.input.interfaces.IQuintSource;
@@ -8,7 +7,6 @@ import main.java.input.interfaces.IQuintSourceListener;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.semanticweb.yars.nx.Node;
-import org.semanticweb.yars.nx.Resource;
 import org.semanticweb.yars.nx.parser.NxParser;
 
 import java.io.*;
@@ -34,7 +32,7 @@ public class FileQuadSource implements IQuintSource {
 
     private List<IQuintSourceListener> listeners;
     private List<Path> filePaths;
-    private NodeResource defaultContext;
+    private String defaultContext;
     private FileFilter fileFilter;
 
     /**
@@ -49,7 +47,7 @@ public class FileQuadSource implements IQuintSource {
     public FileQuadSource(List<String> filePaths, boolean recursive,
                           String defaultContext, FileFilter... fileFilters) {
         listeners = new ArrayList<>();
-        this.defaultContext = new NodeResource(new Resource(defaultContext));
+        this.defaultContext = defaultContext;
         this.filePaths = new ArrayList<>();
         for (String s : filePaths) {
             Path path = Paths.get(s).toAbsolutePath();
@@ -170,14 +168,10 @@ public class FileQuadSource implements IQuintSource {
 
                 // Check whether context was present
                 if (nodes.length == 3) {
-                    quint = new Quad(new NodeResource(subject), new NodeResource(
-                            predicate), new NodeResource(object), defaultContext);
+                    quint = new Quad(subject.getLabel(), predicate.getLabel(), object.getLabel(), defaultContext);
                 } else if (nodes.length == 4) {
                     Node context = nodes[3];
-                    quint = new Quad(new NodeResource(subject), new NodeResource(
-                            predicate), new NodeResource(object), new NodeResource(
-                            context));
-
+                    quint = new Quad(subject.getLabel(), predicate.getLabel(), object.getLabel(), context.getLabel());
                 }
 
                 // If something happened, continue

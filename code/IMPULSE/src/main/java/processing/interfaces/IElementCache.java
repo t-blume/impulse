@@ -1,54 +1,51 @@
 package main.java.processing.interfaces;
 
 import main.java.common.interfaces.IInstanceElement;
-import main.java.common.interfaces.ILocatable;
-import main.java.common.interfaces.IResource;
 
-import java.util.List;
 import java.util.Set;
 
 
 /**
  * A caching structure for instance data. The cache should obey the {@link Set}
  * contract in that there should be no duplicate entries. Instances are expected
- * to be identified by a given {@link IResource} locator, as specified in
+ * to be identified by a given locator, as specified in
  * {@link IInstanceElement}.
  * 
  * @author Bastian
  * 
  */
-public interface IElementCache<T extends ILocatable> {
+public interface IElementCache<T> {
 
 	/**
 	 * Checks, whether a given instance is already in the cache
 	 * 
-	 * @param i
+	 * @param element
 	 *            The instance to be checked for
 	 * @return True, if the instance is already contained in the cache, false
 	 *         otherwise
 	 */
-	boolean contains(T i);
+	boolean contains(T element);
 
 	/**
 	 * Checks, whether a given instance is already in the cache. The instance is
-	 * specified by its unique {@link IResource} locator
+	 * specified by its unique locator
 	 * 
-	 * @param res
+	 * @param locator
 	 *            The instance's locator to be checked for
 	 * @return True, if the instance is already contained in the cache, false
 	 *         otherwise
 	 */
-	boolean contains(IResource res);
+	boolean contains(Integer locator);
 
 	/**
-	 * Returns the instance specified by the given {@link IResource} locator.
+	 * Returns the instance specified by the given locator.
 	 * 
-	 * @param res
+	 * @param locator
 	 *            The instance's locator
 	 * @return The instance specified by the locator, <code>null</code>
 	 *         otherwise
 	 */
-	T get(IResource res);
+	T get(Integer locator);
 
 	 //List<String> get2();
 
@@ -62,13 +59,13 @@ public interface IElementCache<T extends ILocatable> {
 	/**
 	 * Add a new instance to the cache. If an entry is already present, it will
 	 * be replaced by the argument, so care should be taken to avoid multiple
-	 * {@link IResource} locators evaluating as equal
+	 * {@link Integer} locators evaluating as equal
 	 * 
-	 * @param i
+	 * @param element
 	 *            The instance to be added
 	 * @return
 	 */
-	void add(T i);
+	void add(T element);
 
 	/**
 	 * Flushes the whole cache. That means, that all elements have to be removed

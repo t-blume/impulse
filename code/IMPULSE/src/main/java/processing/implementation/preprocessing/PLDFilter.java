@@ -34,7 +34,7 @@ public class PLDFilter implements IQuintProcessor {
     @Override
     public List<IQuint> processQuint(IQuint q) throws URISyntaxException {
         List<IQuint> quints = new LinkedList<>();
-        if (payLevelDomains.contains(MainUtils.extractPLD(MainUtils.normalizeURL(q.getContext().toString()))))
+        if (payLevelDomains.contains(MainUtils.extractPLD(MainUtils.normalizeURL(q.getContext()))))
             quints.add(q);
         else
             counter++;

@@ -48,7 +48,7 @@ public class MemoryTracker implements IQuintListener {
 
 
     @Override
-    public void finishedQuint(IQuint i) {
+    public void finishedQuint(IQuint quint) {
         n++;
         if (n % loggingInterval == 0) {
             long currentTime = System.currentTimeMillis();

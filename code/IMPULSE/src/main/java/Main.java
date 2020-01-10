@@ -1,5 +1,6 @@
 package main.java;
 
+import main.Preparator;
 import main.java.common.implementation.Mapping;
 import main.java.common.interfaces.IInstanceElement;
 import main.java.input.implementation.FileQuadSource;
@@ -14,6 +15,7 @@ import main.java.processing.implementation.common.LRUFiFoInstanceCache;
 import main.java.processing.implementation.parsing.MOVINGParser;
 import main.java.processing.implementation.preprocessing.*;
 import main.java.processing.interfaces.IElementCache;
+import main.java.utils.LongQueue;
 import main.java.utils.MainUtils;
 import main.java.utils.MemoryTracker;
 import org.apache.commons.cli.*;
@@ -95,7 +97,8 @@ public class Main {
         ///////////////////////////////////////////////////////////////////
         Option fullExperiment = new Option("fe", "full-experiment", true, "Run all experiments at once <work dir>.");
         options.addOption(fullExperiment);
-
+        Option prepareFullExperiment = new Option("pp", "prepare-experiment", true, "Convert dataset to serialized POJO <work dir>.");
+        options.addOption(prepareFullExperiment);
         ///////////////////////////////////////////////////////////////////
         //write output to folder
         OptionGroup outputGroup = new OptionGroup();
@@ -150,6 +153,153 @@ public class Main {
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private static void runFullExperimentDiskStorage(String baseFolder, String locatorFile, int cacheSize, String outputDir, String diskCache) throws IOException {
+        String p = "btc_2014";
+
+        LongQueue<Integer> fifoQueue = new LongQueue<>();
+        BufferedReader reader = new BufferedReader(new FileReader(locatorFile));
+        String line;
+        while ((line = reader.readLine()) != null){
+            fifoQueue.add(Integer.parseInt(line));
+        }
+        LRUFiFoInstanceCache<IInstanceElement> rdfInstanceCache = new LRUFiFoInstanceCache<>(cacheSize, diskCache, true);
+        rdfInstanceCache.setFifoQueue(fifoQueue);
+           /*
+            DCTERMS
+         */
+        //create dcTerms base simple harvester
+        Harvester dcTermsBaseSimpleHarvester = createHarvester("dcTerms base simple harvester",
+                baseFolder + "datasources/seedlist_dcterms.csv.gz",
+                baseFolder + "mappings/dcterms-mapping.json", false, rdfInstanceCache,
+                outputDir + File.separator + "dcTermsBaseSimpleHarvester-" + p + ".json");
+
+        //create dcTerms inferencing simple harvester
+        Harvester dcTermsInferencedSimpleHarvester = createHarvester("dcTerms inferencing simple harvester",
+                baseFolder + "datasources/seedlist_dcterms_inferenced.csv.gz",
+                baseFolder + "mappings/dcterms-mapping_inferenced.json", false, rdfInstanceCache,
+                outputDir + File.separator + "dcTermsInferencedSimpleHarvester-" + p + ".json");
+
+        //create dcTerms base pld harvester
+        Harvester dcTermsBasePLDHarvester = createHarvester("dcTerms base pld harvester",
+                baseFolder + "datasources/seedlist_dcterms.csv.gz",
+                baseFolder + "mappings/dcterms-mapping.json", true, rdfInstanceCache,
+                outputDir + File.separator + "dcTermsBasePLDHarvester-" + p + ".json");
+
+        //create dcTerms inferencing pld harvester
+        Harvester dcTermsInferencedPLDHarvester = createHarvester("dcTerms inferencing pld harvester",
+                baseFolder + "datasources/seedlist_dcterms_inferenced.csv.gz",
+                baseFolder + "mappings/dcterms-mapping_inferenced.json", true, rdfInstanceCache,
+                outputDir + File.separator + "dcTermsInferencedPLDarvester-" + p + ".json");
+
+
+        /*
+            BIBO
+         */
+        //create bibo base simple harvester
+        Harvester biboBaseSimpleHarvester = createHarvester("bibo base simple harvester",
+                baseFolder + "datasources/seedlist_bibo.csv.gz",
+                baseFolder + "mappings/bibo-mapping.json", false, rdfInstanceCache,
+                outputDir + File.separator + "biboBaseSimpleHarvester-" + p + ".json");
+
+        //create bibo inferencing simple harvester
+        Harvester biboInferencedSimpleHarvester = createHarvester("bibo inferencing simple harvester",
+                baseFolder + "datasources/seedlist_bibo_inferenced.csv.gz",
+                baseFolder + "mappings/bibo-mapping_inferenced.json", false, rdfInstanceCache,
+                outputDir + File.separator + "biboInferencedSimpleHarvester-" + p + ".json");
+
+        //create bibo base pld harvester
+        Harvester biboBasePLDHarvester = createHarvester("bibo base pld harvester",
+                baseFolder + "datasources/seedlist_bibo.csv.gz",
+                baseFolder + "mappings/bibo-mapping.json", true, rdfInstanceCache,
+                outputDir + File.separator + "biboBasePLDHarvester-" + p + ".json");
+
+        //create bibo inferencing pld harvester
+        Harvester biboInferencedPLDHarvester = createHarvester("bibo inferencing pld harvester",
+                baseFolder + "datasources/seedlist_bibo_inferenced.csv.gz",
+                baseFolder + "mappings/bibo-mapping_inferenced.json", true, rdfInstanceCache,
+                outputDir + File.separator + "biboInferencedPLDHarvester-" + p + ".json");
+
+
+        /*
+            SWRC
+         */
+        //create swrc base simple harvester
+        Harvester swrcBaseSimpleHarvester = createHarvester("swrc base simple harvester",
+                baseFolder + "datasources/seedlist_swrc.csv.gz",
+                baseFolder + "mappings/swrc-mapping.json", false, rdfInstanceCache,
+                outputDir + File.separator + "swrcBaseSimpleHarvester-" + p + ".json");
+
+        //create swrc inferencing simple harvester
+        Harvester swrcInferencedSimpleHarvester = createHarvester("swrc inferencing simple harvester",
+                baseFolder + "datasources/seedlist_swrc_inferenced.csv.gz",
+                baseFolder + "mappings/swrc-mapping_inferenced.json", false, rdfInstanceCache,
+                outputDir + File.separator + "swrcInferencedSimpleHarvester-" + p + ".json");
+
+        //create swrc base pld harvester
+        Harvester swrcBasePLDHarvester = createHarvester("swrc base pld harvester",
+                baseFolder + "datasources/seedlist_swrc.csv.gz",
+                baseFolder + "mappings/swrc-mapping.json", true, rdfInstanceCache,
+                outputDir + File.separator + "swrcBasePLDHarvester-" + p + ".json");
+
+        //create swrc inferencing pld harvester
+        Harvester swrcInferencedPLDHarvester = createHarvester("swrc inferenced pld harvester",
+                baseFolder + "datasources/seedlist_swrc_inferenced.csv.gz",
+                baseFolder + "mappings/swrc-mapping_inferenced.json", true, rdfInstanceCache,
+                outputDir + File.separator + "swrcInferencedPLDHarvester-" + p + ".json");
+
+        logger.info("Harvesting started ....");
+        long startTime = System.currentTimeMillis();
+        //starting the source starts all machinery
+        rdfInstanceCache.close();
+        long time = System.currentTimeMillis() - startTime;
+        logger.info("Harvesting took: " + MainUtils.prettyPrintTimeStamp(time));
+
+
+
+
+        /*
+            export some statistics
+         */
+        logger.info("swrcBaseSimple: " + swrcBaseSimpleHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "swrcBaseSimple-" + p + "-stats.txt", swrcBaseSimpleHarvester.getParser().getStatisticsString());
+        //---//
+        logger.info("swrcInferencedSimple: " + swrcInferencedSimpleHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "swrcInferencedSimple-" + p + "-stats.txt", swrcInferencedSimpleHarvester.getParser().getStatisticsString());
+        //---//
+        logger.info("swrcBasePLD: " + swrcBasePLDHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "swrcBasePLD-" + p + "-stats.txt", swrcBasePLDHarvester.getParser().getStatisticsString());
+        //---//
+        logger.info("swrcInferencedPLD: " + swrcInferencedPLDHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "swrcInferencedPLD-" + p + "-stats.txt", swrcInferencedPLDHarvester.getParser().getStatisticsString());
+
+
+        logger.info("biboBaseSimple: " + biboBaseSimpleHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "biboBaseSimple-" + p + "-stats.txt", biboBaseSimpleHarvester.getParser().getStatisticsString());
+        //---//
+        logger.info("biboInferencedSimple: " + biboInferencedSimpleHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "biboInferencedSimple-" + p + "-stats.txt", biboInferencedSimpleHarvester.getParser().getStatisticsString());
+        //---//
+        logger.info("biboBasePLD: " + biboBasePLDHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "biboBasePLD-" + p + "-stats.txt", biboBasePLDHarvester.getParser().getStatisticsString());
+        //---//
+        logger.info("biboInferencedPLD: " + biboInferencedPLDHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "biboInferencedPLD-" + p + "-stats.txt", biboInferencedPLDHarvester.getParser().getStatisticsString());
+
+
+        logger.info("dcTermsBaseSimple: " + dcTermsBaseSimpleHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "dcTermsBaseSimple-" + p + "-stats.txt", dcTermsBaseSimpleHarvester.getParser().getStatisticsString());
+        //---//
+        logger.info("dcTermsInferencedSimple: " + dcTermsInferencedSimpleHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "dcTermsInferencedSimple-" + p + "-stats.txt", dcTermsInferencedSimpleHarvester.getParser().getStatisticsString());
+        //---//
+        logger.info("dcTermsBasePLD: " + dcTermsBasePLDHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "dcTermsBasePLD-" + p + "-stats.txt", dcTermsBasePLDHarvester.getParser().getStatisticsString());
+        //---//
+        logger.info("dcTermsInferencedPLD: " + dcTermsInferencedPLDHarvester.getParser().getStatisticsString());
+        export(outputDir + File.separator + "dcTermsInferencedPLD-" + p + "-stats.txt", dcTermsInferencedPLDHarvester.getParser().getStatisticsString());
+
     }
 
     private static void runFullExperiment(String baseFolder, List<String> inputFiles, int cacheSize, String outputDir, String diskCache) throws IOException {
@@ -385,11 +535,25 @@ public class Main {
         if(cmd.hasOption("dc"))
             diskcacheFolder = cmd.getOptionValue("dc");
 
+
+        if(cmd.hasOption("pp")){
+            Preparator preparator = new Preparator();
+            try {
+                preparator.runThisShit(inputFiles, cacheSize, diskcacheFolder, cmd.getOptionValue("pp"));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
         if(cmd.hasOption("fe")){
             //run full experiment
             String baseFolder = "../";
             baseFolder = cmd.getOptionValue("fe");
-            runFullExperiment(baseFolder, inputFiles, cacheSize, outputDir, diskcacheFolder);
+            if(cmd.getOptionValue("f").endsWith("csv"))
+                runFullExperimentDiskStorage(baseFolder, cmd.getOptionValue("f"), cacheSize, outputDir, diskcacheFolder);
+            else
+                runFullExperiment(baseFolder, inputFiles, cacheSize, outputDir, diskcacheFolder);
             return;
         }
 

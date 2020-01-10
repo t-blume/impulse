@@ -1,8 +1,6 @@
 package main.java.common.implementation;
 
 import main.java.common.interfaces.IQuint;
-import main.java.common.interfaces.IResource;
-import main.java.common.interfaces.ITimestamp;
 
 import java.io.Serializable;
 
@@ -15,12 +13,11 @@ import java.io.Serializable;
  */
 public class Quad implements IQuint, Serializable {
 
-	private IResource subject;
-	private IResource predicate;
-	private IResource object;
-	private IResource context;
+	private String subject;
+	private String predicate;
+	private String object;
+	private String context;
 
-	private ITimestamp time;
 	private int hash;
 
 	/**
@@ -33,7 +30,7 @@ public class Quad implements IQuint, Serializable {
 	 * @param object
 	 *            The object
 	 */
-	public Quad(IResource subject, IResource predicate, IResource object) {
+	public Quad(String subject, String predicate, String object) {
 		this(subject, predicate, object, null);
 	}
 
@@ -49,8 +46,8 @@ public class Quad implements IQuint, Serializable {
 	 * @param context
 	 *            The context
 	 */
-	public Quad(IResource subject, IResource predicate, IResource object,
-                IResource context) {
+	public Quad(String subject, String predicate, String object,
+				String context) {
 		this.subject = subject;
 		this.predicate = predicate;
 		this.object = object;
@@ -68,33 +65,31 @@ public class Quad implements IQuint, Serializable {
 		} else {
 			hash = 31 * hash + this.context.hashCode();
 		}
-
-		this.time = new DateTimestamp();
 	}
 
 	@Override
-	public IResource getSubject() {
+	public String getSubject() {
 		return subject;
 	}
 
 	@Override
-	public IResource getPredicate() {
+	public String getPredicate() {
 		return predicate;
 	}
 
 	@Override
-	public IResource getObject() {
+	public String getObject() {
 		return object;
 	}
 
 	@Override
-	public IResource getContext() {
+	public String getContext() {
 		return context;
 	}
 
 	@Override
-	public ITimestamp getTimestamp() {
-		return time;
+	public String getTimestamp() {
+		return null;
 	}
 
 	@Override

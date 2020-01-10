@@ -33,9 +33,8 @@ public class ContextFilter implements IQuintProcessor {
     @Override
     public List<IQuint> processQuint(IQuint q) {
         List<IQuint> quints = new LinkedList<>();
-      // quints.add(q);
         try {
-            if(contexts.contains(MainUtils.normalizeURL(q.getContext().toString())))
+            if(contexts.contains(MainUtils.normalizeURL(q.getContext())))
                 quints.add(q);
             else
                 counter++;

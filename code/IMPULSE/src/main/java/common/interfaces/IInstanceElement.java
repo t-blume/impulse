@@ -5,12 +5,12 @@ import java.util.Set;
 /**
  * A representation of an instance modeled by RDF statements. Instances are
  * described by their properties and types. Instances are expected to be
- * uniquely identified by their {@link IResource} locator.
+ * uniquely identified by their locator.
  * 
  * @author Bastian
  * 
  */
-public interface IInstanceElement extends ILocatable {
+public interface IInstanceElement {
 
 	
 
@@ -46,4 +46,7 @@ public interface IInstanceElement extends ILocatable {
 	 * @return
 	 */
 	IInstanceElement clone();
+
+
+	int getLocator();
 }

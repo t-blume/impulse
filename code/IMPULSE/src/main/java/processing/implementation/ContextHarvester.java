@@ -4,7 +4,6 @@ package main.java.processing.implementation;
 import main.java.common.implementation.RDFInstance;
 import main.java.common.interfaces.IInstanceElement;
 import main.java.common.interfaces.IQuint;
-import main.java.common.interfaces.IResource;
 import main.java.processing.implementation.common.DataItemBuffer;
 import main.java.processing.implementation.parsing.MOVINGParser;
 import main.java.processing.interfaces.IElementCache;
@@ -43,8 +42,8 @@ public class ContextHarvester extends Harvester implements IElementCacheListener
 
 
     @Override
-    public IInstanceElement getInstance(IResource resource) {
-        return filterInstance(super.getInstance(resource));
+    public IInstanceElement getInstance(Integer locator) {
+        return filterInstance(super.getInstance(locator));
     }
 
     IInstanceElement filterInstance(IInstanceElement iInstanceElement) {

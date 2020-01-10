@@ -15,27 +15,28 @@ import java.util.zip.GZIPInputStream;
 
 public class MainUtils {
 
-    public static String prettyPrintTimeStamp(long timestamp){
+    public static String prettyPrintTimeStamp(long timestamp) {
         int hours = 0;          //3,600,000
         int minutes = 0;        //60,000
         int seconds = 0;        //1000
 
-        while(timestamp - 3600000 >= 0){
+        while (timestamp - 3600000 >= 0) {
             timestamp -= 3600000;
             hours++;
         }
-        while(timestamp - 60000 >= 0){
+        while (timestamp - 60000 >= 0) {
             timestamp -= 60000;
             minutes++;
         }
-        while(timestamp - 1000 >= 0){
+        while (timestamp - 1000 >= 0) {
             timestamp -= 1000;
             seconds++;
         }
 
 
-        return hours + "h " +  minutes + "m " + seconds + "s " + timestamp + "ms";
+        return hours + "h " + minutes + "m " + seconds + "s " + timestamp + "ms";
     }
+
     /**
      * Extracts the outputfilename from the inputFiles
      *
@@ -135,7 +136,7 @@ public class MainUtils {
         InputStreamReader is;
         if (filename.endsWith(".gz"))
             is = new InputStreamReader(new GZIPInputStream(new FileInputStream(filename)));
-         else
+        else
             is = new InputStreamReader(new FileInputStream(filename));
 
         try (BufferedReader br = new BufferedReader(is)) {
@@ -225,13 +226,13 @@ public class MainUtils {
         return pld;
     }
 
-    public static void deleteDirectory(String dirname){
+    public static void deleteDirectory(String dirname) {
         System.out.println("Deleting " + dirname);
         File tmpFolder = new File(dirname);
         String[] entries = tmpFolder.list();
         for (String s : entries) {
             File currentFile = new File(tmpFolder.getPath(), s);
-            if(currentFile.isFile())
+            if (currentFile.isFile())
                 currentFile.delete();
             else
                 deleteDirectory(currentFile.getPath());
@@ -239,4 +240,12 @@ public class MainUtils {
         tmpFolder.delete();
     }
 
+    public static boolean isURI(String string) {
+        try {
+            new URI(string);
+            return true;
+        } catch (URISyntaxException e) {
+            return false;
+        }
+    }
 }

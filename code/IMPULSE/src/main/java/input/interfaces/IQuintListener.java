@@ -18,10 +18,10 @@ public interface IQuintListener {
 	 * This method will be called every time, an {@link IQuint} finishes
 	 * processing
 	 * 
-	 * @param i
+	 * @param quint
 	 *            The finished quint
 	 */
-	void finishedQuint(IQuint i);
+	void finishedQuint(IQuint quint);
 
 	/**
 	 * Signals that the source has completed a micro batch

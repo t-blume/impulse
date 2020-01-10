@@ -2,7 +2,6 @@ package main.java.common.implementation;
 
 import main.java.common.interfaces.IInstanceElement;
 import main.java.common.interfaces.IQuint;
-import main.java.common.interfaces.IResource;
 
 import java.io.Serializable;
 import java.util.HashSet;
@@ -19,17 +18,16 @@ public class RDFInstance implements IInstanceElement, Serializable {
 	private Set<IQuint> outgoingQuints;
 	private Set<IQuint> incomingQuints;
 
-	private IResource resource;
+	private Integer locator;
 
-	public static String RESOURCE_TYPE = "Instance";
 
 	/**
 	 * Constructs a new instance, which can be referenced by the given locator
 	 *
 	 * @param locator The locator for this instance
 	 */
-	public RDFInstance(IResource locator) {
-		this.resource = new TypedResource(locator, RESOURCE_TYPE);
+	public RDFInstance(int locator) {
+		this.locator = locator;
 		outgoingQuints = new HashSet<>();
 		incomingQuints = new HashSet<>();
 	}
@@ -54,7 +52,7 @@ public class RDFInstance implements IInstanceElement, Serializable {
 
 	@Override
 	public IInstanceElement clone() {
-		IInstanceElement element = new RDFInstance(getLocator());
+		IInstanceElement element = new RDFInstance(locator);
 		for(IQuint quint : getOutgoingQuints())
 			element.addOutgoingQuint(quint);
 		for(IQuint quint : getIncomingQuints())
@@ -63,14 +61,14 @@ public class RDFInstance implements IInstanceElement, Serializable {
 	}
 
 	@Override
-	public String toString() {
-		return "Instance: " + resource + "\n" + "\tOutgoing: " + outgoingQuints.size()
-				+ " Incoming: " + incomingQuints.size();
+	public int getLocator() {
+		return locator;
 	}
 
 	@Override
-	public IResource getLocator() {
-		return resource;
+	public String toString() {
+		return "Instance: " + locator + "\n" + "\tOutgoing: " + outgoingQuints.size()
+				+ " Incoming: " + incomingQuints.size();
 	}
 
 }
