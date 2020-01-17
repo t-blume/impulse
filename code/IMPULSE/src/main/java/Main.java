@@ -12,6 +12,7 @@ import main.java.processing.implementation.LODatioQuery;
 import main.java.processing.implementation.PLDHarvester;
 import main.java.processing.implementation.common.DataItemBuffer;
 import main.java.processing.implementation.common.LRUFiFoInstanceCache;
+import main.java.processing.implementation.common.LRUMongoInstanceCache;
 import main.java.processing.implementation.parsing.MOVINGParser;
 import main.java.processing.implementation.preprocessing.*;
 import main.java.processing.interfaces.IElementCache;
@@ -164,7 +165,7 @@ public class Main {
         while ((line = reader.readLine()) != null){
             fifoQueue.add(Integer.parseInt(line));
         }
-        LRUFiFoInstanceCache<IInstanceElement> rdfInstanceCache = new LRUFiFoInstanceCache<>(cacheSize, diskCache, true);
+        IElementCache rdfInstanceCache = new LRUMongoInstanceCache(cacheSize, diskCache);
         rdfInstanceCache.setFifoQueue(fifoQueue);
            /*
             DCTERMS
@@ -318,7 +319,7 @@ public class Main {
         // all quints have to pass the pre-processing pipeline
         quintSource.registerQuintListener(preProcessingPipeline);
         //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
-        IElementCache<IInstanceElement> rdfInstanceCache = new LRUFiFoInstanceCache<>(cacheSize, diskCache, true);
+        IElementCache rdfInstanceCache = new LRUMongoInstanceCache(cacheSize, diskCache);
         InstanceAggregator instanceAggregatorContext = new InstanceAggregator(rdfInstanceCache);
         preProcessingPipeline.registerQuintListener(instanceAggregatorContext);
 

@@ -1,6 +1,7 @@
 package main.java.processing.interfaces;
 
 import main.java.common.interfaces.IInstanceElement;
+import main.java.utils.LongQueue;
 
 import java.util.Set;
 
@@ -16,6 +17,8 @@ import java.util.Set;
  */
 public interface IElementCache<T> {
 
+
+	void setFifoQueue(LongQueue<Integer> fifoQueue);
 	/**
 	 * Checks, whether a given instance is already in the cache
 	 * 
@@ -87,4 +90,7 @@ public interface IElementCache<T> {
 	 * notified and the cache should be flushed
 	 */
 	void close();
+
+
+	void flushAll(String outfile);
 }

@@ -83,5 +83,10 @@
             <artifactId>javatools</artifactId>
             <version>2017-06-28</version>
         </dependency>
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongo-java-driver</artifactId>
+            <version>3.4.1</version>
+        </dependency>
     </dependencies>
 </project>

@@ -1,6 +1,7 @@
 package main.java.common.interfaces;
 
 import java.util.Set;
+import org.bson.Document;
 
 /**
  * A representation of an instance modeled by RDF statements. Instances are
@@ -49,4 +50,7 @@ public interface IInstanceElement {
 
 
 	int getLocator();
+
+	Document toDocument();
+
 }

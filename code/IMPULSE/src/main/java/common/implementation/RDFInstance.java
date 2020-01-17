@@ -2,8 +2,11 @@ package main.java.common.implementation;
 
 import main.java.common.interfaces.IInstanceElement;
 import main.java.common.interfaces.IQuint;
+import org.bson.Document;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -14,6 +17,10 @@ import java.util.Set;
  *
  */
 public class RDFInstance implements IInstanceElement, Serializable {
+
+	public static final String LOCATOR_KEY = "locator";
+	private static final String OUTGOING_KEY = "outgoing";
+	private static final String INCOMING_KEY = "incoming";
 
 	private Set<IQuint> outgoingQuints;
 	private Set<IQuint> incomingQuints;
@@ -30,6 +37,15 @@ public class RDFInstance implements IInstanceElement, Serializable {
 		this.locator = locator;
 		outgoingQuints = new HashSet<>();
 		incomingQuints = new HashSet<>();
+	}
+	public RDFInstance(Document document){
+		this.locator = (Integer) document.get(LOCATOR_KEY);
+		ArrayList<Document> outgoing = (ArrayList<Document>) document.get(OUTGOING_KEY);
+		this.outgoingQuints = new HashSet<>();
+		outgoing.forEach(d -> outgoingQuints.add(new Quad(d)));
+		ArrayList<Document> incoming = (ArrayList<Document>) document.get(INCOMING_KEY);
+		this.incomingQuints =  new HashSet<>();
+		incoming.forEach(d -> incomingQuints.add(new Quad(d)));
 	}
 
 	@Override
@@ -64,6 +80,20 @@ public class RDFInstance implements IInstanceElement, Serializable {
 	public int getLocator() {
 		return locator;
 	}
+
+	@Override
+	public Document toDocument() {
+		Document document = new Document();
+		document.put(LOCATOR_KEY, locator);
+		ArrayList<Document> outgoing = new ArrayList<>();
+		outgoingQuints.forEach(q -> outgoing.add(q.toDocument()));
+		document.put(OUTGOING_KEY, outgoing);
+		ArrayList<Document> incoming = new ArrayList<>();
+		incomingQuints.forEach(q -> incoming.add(q.toDocument()));
+		document.put(INCOMING_KEY, incoming);
+		return document;
+	}
+
 
 	@Override
 	public String toString() {

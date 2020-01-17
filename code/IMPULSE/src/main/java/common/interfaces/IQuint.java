@@ -1,5 +1,7 @@
 package main.java.common.interfaces;
 
+import org.bson.Document;
+
 /**
  * A 5-Tuple representing a single statement made in the RDF N-Quad notation
  * (@see <a href="http://google.com">http://www.w3.org/TR/n-quads/</a>) with an
@@ -46,4 +48,7 @@ public interface IQuint {
      * @return The timestamp corresponding to the time, the quint was observed
      */
 	String getTimestamp();
+
+
+	Document toDocument();
 }

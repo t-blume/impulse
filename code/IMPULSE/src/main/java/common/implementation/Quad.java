@@ -1,6 +1,7 @@
 package main.java.common.implementation;
 
 import main.java.common.interfaces.IQuint;
+import org.bson.Document;
 
 import java.io.Serializable;
 
@@ -12,6 +13,11 @@ import java.io.Serializable;
  *
  */
 public class Quad implements IQuint, Serializable {
+	private static final String SUBJECT_KEY = "subject";
+	private static final String PREDICATE_KEY = "predicate";
+	private static final String OBJECT_KEY = "object";
+	private static final String CONTEXT_KEY = "context";
+
 
 	private String subject;
 	private String predicate;
@@ -67,6 +73,26 @@ public class Quad implements IQuint, Serializable {
 		}
 	}
 
+	public Quad(Document document) {
+		this.subject = document.getString(SUBJECT_KEY);
+		this.predicate = document.getString(PREDICATE_KEY);
+		this.object = document.getString(OBJECT_KEY);
+		this.context = document.getString(CONTEXT_KEY);
+
+		// precompute hash, since quad is immutable
+		hash = 17;
+		hash = 31 * hash + this.subject.hashCode();
+		hash = 31 * hash + this.predicate.hashCode();
+		hash = 31 * hash + this.object.hashCode();
+
+		if (this.context == null) {
+
+			hash = 31 * hash;
+		} else {
+			hash = 31 * hash + this.context.hashCode();
+		}
+	}
+
 	@Override
 	public String getSubject() {
 		return subject;
@@ -90,6 +116,18 @@ public class Quad implements IQuint, Serializable {
 	@Override
 	public String getTimestamp() {
 		return null;
+	}
+
+	@Override
+	public Document toDocument() {
+		Document document = new Document();
+		document.put(SUBJECT_KEY, subject);
+		document.put(PREDICATE_KEY, predicate);
+		document.put(OBJECT_KEY, object);
+		document.put(CONTEXT_KEY, context);
+		return document;
+		//return  "{ \"subject\": \"" + subject + "\", \"predicate\": \"" + predicate
+		//		+ "\", \"object\": \"" + object + "\", \"context\": \"" + context + "\"}";
 	}
 
 	@Override
@@ -117,4 +155,6 @@ public class Quad implements IQuint, Serializable {
 		return "Subject: " + subject + ", Predicate: " + predicate
 				+ ", Object: " + object + ", Context: " + context;
 	}
+
+
 }

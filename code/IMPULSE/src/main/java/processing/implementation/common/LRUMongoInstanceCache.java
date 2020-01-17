@@ -1,7 +1,10 @@
 package main.java.processing.implementation.common;
 
 
-import main.java.common.interfaces.IInstanceElement;
+import com.mongodb.MongoClient;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import main.java.common.implementation.RDFInstance;
 import main.java.processing.interfaces.IElementCache;
 import main.java.processing.interfaces.IElementCacheListener;
 import main.java.utils.LRUCache;
@@ -9,28 +12,30 @@ import main.java.utils.LongQueue;
 import main.java.utils.MemoryTracker;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.bson.Document;
 
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 
 import static main.java.utils.MainUtils.createFile;
-import static main.java.utils.MainUtils.deleteDirectory;
 
 
 /**
- * @param <T>
+ *
  */
-public class LRUFiFoInstanceCache<T extends IInstanceElement> implements IElementCache<T> {
-    private static final Logger logger = LogManager.getLogger(LRUFiFoInstanceCache.class.getSimpleName());
+public class LRUMongoInstanceCache implements IElementCache<RDFInstance> {
+    private static final Logger logger = LogManager.getLogger(LRUMongoInstanceCache.class.getSimpleName());
     private static final int loggingInterval = 1000000;
     private static final int memoryLoggingInterval = 10000000;
 
-    private static final int DISK_CACHE_FOLDER_DEPTH = 2;
-    //location where to store elements that do no fit in main memory
-    private String diskCachedElements;
+    private MongoClient mongoClient = new MongoClient();
+    private MongoDatabase database = mongoClient.getDatabase("impulse-cache");
+    private MongoCollection<Document> collection;
     //Least-Recently Used (LRU) elements stored in memory
-    private LRUCache<Integer, T> memoryCachedElements;
+    private LRUCache<Integer, RDFInstance> memoryCachedElements;
     //keep track of all elements to evict them later: First-in-First-out (FiFo).
     //allow more than Integer.MAX_VALUE elements, i.e., Integer.MAX_VALUE * Integer.MAX_VALUE values
     private LongQueue<Integer> fifoQueue;
@@ -45,10 +50,6 @@ public class LRUFiFoInstanceCache<T extends IInstanceElement> implements IElemen
     //flush elements to each listener afterwards
     private List<IElementCacheListener> listeners;
 
-    //delete disk cache afterwards?
-    private boolean deleteDiskCache;
-
-
     private Object sync = new Object();
 
     private long lastTime = System.currentTimeMillis();
@@ -62,29 +63,20 @@ public class LRUFiFoInstanceCache<T extends IInstanceElement> implements IElemen
 
     private long cacheMisses = 0;
 
-    private void initSubFolders(String baseFolder, int depth) {
-        for (int i = -9; i < 10; i++) {
-            new File(baseFolder + File.separator + i).mkdir();
-            if (depth < DISK_CACHE_FOLDER_DEPTH)
-                initSubFolders(baseFolder + File.separator + i, depth + 1);
-        }
-    }
 
     /**
      * Constructor. Creates a cache with the given capacity
      *
      * @param capacity The capacity
      */
-    public LRUFiFoInstanceCache(int capacity, String diskCachedElements, boolean deleteDiskCache) {
-        this.diskCachedElements = diskCachedElements;
-        new File(diskCachedElements).mkdirs();
-        initSubFolders(diskCachedElements, 1);
-
+    public LRUMongoInstanceCache(int capacity, String mongoCollection) {
+        //TODO check for existence
+//        database.createCollection(mongoCollection);
+        collection = database.getCollection(mongoCollection);
         memoryCachedElements = new LRUCache<>(capacity, 0.75f);
         listeners = new ArrayList<>();
         fifoQueue = new LongQueue<>();
         this.capacity = capacity;
-        this.deleteDiskCache = deleteDiskCache;
     }
 
     public void setFifoQueue(LongQueue<Integer> fifoQueue) {
@@ -92,37 +84,36 @@ public class LRUFiFoInstanceCache<T extends IInstanceElement> implements IElemen
     }
 
     @Override
-    public boolean contains(T element) {
+    public boolean contains(RDFInstance element) {
         return contains(element.getLocator());
     }
 
     @Override
     public boolean contains(Integer locator) {
         boolean contains = memoryCachedElements.containsKey(locator);
-        if (!contains)
-            return diskContains(locator);
-        else
+        if (!contains) {
+            RDFInstance element = getFromDB(locator);
+            if (element != null) {
+                put(element);
+                return true;
+            } else
+                return false;
+        } else
             return true;
     }
 
     @Override
-    public T get(Integer locator) {
+    public RDFInstance get(Integer locator) {
         //element not in memory
         if (!memoryCachedElements.containsKey(locator)) {
             //element not on disk
-            if (!diskContains(locator)) {
-//                logger.debug(locator + "not found");
-                cacheMisses++;
-                return null;
-            }
-            else {
-                synchronized (sync) {
-                    T element = getFromDisk(locator);
-                    //add to cache
+            synchronized (sync) {
+                RDFInstance element = getFromDB(locator);
+                if (element != null)
                     put(element);
-                    return element;
-                }
+                return element;
             }
+
         } else
             return memoryCachedElements.get(locator);
 
@@ -140,13 +131,13 @@ public class LRUFiFoInstanceCache<T extends IInstanceElement> implements IElemen
     }
 
     private void removeEldest() {
-        T eldestElement = memoryCachedElements.getEldestEntry().getValue();
+        RDFInstance eldestElement = memoryCachedElements.getEldestEntry().getValue();
         //do not delete old element but store on disk
-        saveToDisk(eldestElement);
+        saveToMongo(eldestElement);
         memoryCachedElements.remove(eldestElement.getLocator());
     }
 
-    private void put(T element) {
+    private void put(RDFInstance element) {
         // if memory is full -> move eldest entry to disk
         synchronized (sync) {
             if (memoryCachedElements.size() >= capacity)
@@ -171,13 +162,13 @@ public class LRUFiFoInstanceCache<T extends IInstanceElement> implements IElemen
 
 
     @Override
-    public void add(T element) {
+    public void add(RDFInstance element) {
         if (!contains(element)) {
             //new resource, add to queue
             addToQueue(element.getLocator());
             //increase total counter
             maxSize++;
-            if(size() % loggingInterval == 0) {
+            if (size() % loggingInterval == 0) {
                 logger.debug("--------------------------------------");
                 logger.debug("Instances parsed: " + String.format("%,d", size()));
                 logger.debug("Memory cached files: " + String.format("%,d", memoryCachedElements.size()));
@@ -216,33 +207,8 @@ public class LRUFiFoInstanceCache<T extends IInstanceElement> implements IElemen
     public void flush() {
         memoryCachedElements = new LRUCache<>(capacity, 0.75f);
         fifoQueue = new LongQueue<>();
-        if (deleteDiskCache)
-            deleteDirectory(diskCachedElements);
     }
 
-
-    @Override
-    public void flushAll(String outfile) {
-        logger.info("Flushing cache to disk");
-        long i = 0L;
-        for (T element : memoryCachedElements.values()){
-            saveToDisk(element);
-            i++;
-            if (i % 1000 == 0)
-                logger.debug("flushed: " + i);
-        }
-        logger.info("Exporting " + fifoQueue.size() + " subject URIs");
-        PrintStream out = null;
-        try {
-            out = new PrintStream(new FileOutputStream(createFile(outfile)));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        while(fifoQueue.size() > 0)
-            out.println(fifoQueue.poll());
-        out.close();
-    }
 
     @Override
     public void registerCacheListener(IElementCacheListener listener) {
@@ -281,49 +247,47 @@ public class LRUFiFoInstanceCache<T extends IInstanceElement> implements IElemen
         logger.info("Cache misses: " + cacheMisses);
     }
 
-
-    private boolean diskContains(Integer locator) {
-        return new File(hashToFilename(locator)).exists();
-    }
-
-    private T getFromDisk(Integer locator) {
-        T res = null;
-        File file = new File(hashToFilename(locator));
-        if (file.exists()) {
-            try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
-                res = (T) ois.readObject();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
+    @Override
+    public void flushAll(String outfile) {
+        logger.info("Flushing cache to mongoDB");
+        long i = 0L;
+        for (RDFInstance element : memoryCachedElements.values()) {
+            saveToMongo(element);
+            i++;
+            if (i % 1000 == 0)
+                logger.debug("flushed: " + i);
         }
-        return res;
-    }
-
-    private void saveToDisk(T element) {
-        File file = new File(hashToFilename(element.getLocator()));
-
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))){
-            oos.writeObject(element);
-        } catch (IOException e) {
+        logger.info("Exporting " + fifoQueue.size() + " subject URIs");
+        PrintStream out = null;
+        try {
+            out = new PrintStream(new FileOutputStream(createFile(outfile)));
+        } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+
+
+        while (fifoQueue.size() > 0)
+            out.println(fifoQueue.poll());
+        out.close();
     }
 
 
-    private String hashToFilename(int hashcode) {
-        String filename = diskCachedElements + File.separator;
-        String tmp = String.valueOf(hashcode);
-        if (tmp.startsWith("-")) {
-            filename += '-';
-            tmp = tmp.replaceFirst("-", "");
-        }
-        char[] hashDigits = tmp.toCharArray();
-        for (int i = 0; i < DISK_CACHE_FOLDER_DEPTH; i++)
-            filename += hashDigits[i] + File.separator;
+//    private boolean mongoContains(Integer locator) {
+//        Document document = collection.find(new Document("locator", locator)).first();
+//        return document != null;
+//    }
 
-
-        return filename + hashcode + ".ser.tmp";
+    private RDFInstance getFromDB(Integer locator) {
+        Document document = collection.find(new Document(RDFInstance.LOCATOR_KEY, locator)).first();
+        if (document != null)
+            return new RDFInstance(document);
+        else
+            return null;
     }
+
+    private void saveToMongo(RDFInstance element) {
+        Document document = element.toDocument();
+        collection.insertOne(document);
+    }
+
 }
