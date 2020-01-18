@@ -165,7 +165,7 @@ public class Main {
         while ((line = reader.readLine()) != null){
             fifoQueue.add(Integer.parseInt(line));
         }
-        IElementCache rdfInstanceCache = new LRUMongoInstanceCache(cacheSize, diskCache);
+        IElementCache rdfInstanceCache = new LRUMongoInstanceCache(cacheSize, diskCache, false);
         rdfInstanceCache.setFifoQueue(fifoQueue);
            /*
             DCTERMS
@@ -319,7 +319,7 @@ public class Main {
         // all quints have to pass the pre-processing pipeline
         quintSource.registerQuintListener(preProcessingPipeline);
         //aggregate all quints that passed the pipeline to RDF Instances and add them to a cache
-        IElementCache rdfInstanceCache = new LRUMongoInstanceCache(cacheSize, diskCache);
+        IElementCache rdfInstanceCache = new LRUMongoInstanceCache(cacheSize, diskCache, false);
         InstanceAggregator instanceAggregatorContext = new InstanceAggregator(rdfInstanceCache);
         preProcessingPipeline.registerQuintListener(instanceAggregatorContext);
 

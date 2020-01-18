@@ -34,6 +34,8 @@ public class LRUMongoInstanceCache implements IElementCache<RDFInstance> {
     private MongoClient mongoClient = new MongoClient();
     private MongoDatabase database = mongoClient.getDatabase("impulse-cache");
     private MongoCollection<Document> collection;
+
+    private boolean loadMode = false;
     //Least-Recently Used (LRU) elements stored in memory
     private LRUCache<Integer, RDFInstance> memoryCachedElements;
     //keep track of all elements to evict them later: First-in-First-out (FiFo).
@@ -69,14 +71,19 @@ public class LRUMongoInstanceCache implements IElementCache<RDFInstance> {
      *
      * @param capacity The capacity
      */
-    public LRUMongoInstanceCache(int capacity, String mongoCollection) {
+    public LRUMongoInstanceCache(int capacity, String mongoCollection, boolean loadMode) {
         //TODO check for existence
 //        database.createCollection(mongoCollection);
         collection = database.getCollection(mongoCollection);
+        if(collection != null)
+            collection.drop();
+
+        database.createCollection(mongoCollection);
         memoryCachedElements = new LRUCache<>(capacity, 0.75f);
         listeners = new ArrayList<>();
         fifoQueue = new LongQueue<>();
         this.capacity = capacity;
+        this.loadMode = loadMode;
     }
 
     public void setFifoQueue(LongQueue<Integer> fifoQueue) {
@@ -197,6 +204,8 @@ public class LRUMongoInstanceCache implements IElementCache<RDFInstance> {
                 logger.info("Used Memory: " + String.format("%,d", runtimeUsedMemory / 1024 / 1024) + " MB");
                 memoryTracker.getOut().println(String.format("%,d", (int) (System.currentTimeMillis() - start) / 1000) + "s instance count " + String.format("%,d", maxSize));
             }
+            if(loadMode && maxSize % capacity == 0)
+                flush();
         }
         //add element to memory, dump something to disk if necessary
         put(element);
@@ -205,8 +214,22 @@ public class LRUMongoInstanceCache implements IElementCache<RDFInstance> {
 
     @Override
     public void flush() {
-        memoryCachedElements = new LRUCache<>(capacity, 0.75f);
-        fifoQueue = new LongQueue<>();
+        logger.info("Flushing chunk of cache to mongoDB");
+        long i = memoryCachedElements.size()/2;
+        long iv = memoryCachedElements.size()/4;
+        while (memoryCachedElements.size() > 0 && i > 0){
+            removeEldest();
+            i--;
+            if (i % iv == 0)
+                logger.debug("flushed chunk of " + iv);
+        }
+//        for (RDFInstance element : memoryCachedElements.values()) {
+//            saveToMongo(element);
+//            i++;
+//            if (i % memoryCachedElements.size()/4 == 0)
+//                logger.debug("flushed: " + i);
+//        }
+//        memoryCachedElements = new LRUCache<>(capacity, 0.75f);
     }
 
 

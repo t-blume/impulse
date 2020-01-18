@@ -31,7 +31,7 @@ public class Preparator {
         // all quints have to pass the pre-processing pipeline
         quintSource.registerQuintListener(preProcessingPipeline);
 
-        IElementCache rdfInstanceCache = new LRUMongoInstanceCache(cacheSize, diskCache);
+        IElementCache rdfInstanceCache = new LRUMongoInstanceCache(cacheSize, diskCache, false);
         InstanceAggregator instanceAggregatorContext = new InstanceAggregator(rdfInstanceCache);
         preProcessingPipeline.registerQuintListener(instanceAggregatorContext);
 
