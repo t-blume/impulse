@@ -1,0 +1,8 @@
+--------Quads---------
+Num: 497,170
+Time: 4,254s
+Maximum quads per second: 0
+Minimum quads per second: 2,147,483,647
+Maximum memory allocated: 0 MB
+Maximum memory used: 0 MB
+--------------------------

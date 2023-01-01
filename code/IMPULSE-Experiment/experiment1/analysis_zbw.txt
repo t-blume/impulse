@@ -1,0 +1,12 @@
+Total Docs,6768
+Docs with Abstracts,6762
+Docs with Concepts,0
+Docs with Keywords,6760
+Docs complete,0
+Avg. Concepts/Doc,0
+SD Concepts/Doc,0
+Avg. Keywords/Doc,5.953402366863905
+SD Keywords/Doc,1.8861187781264652
+Number of PLDs,1
+zbw.eu,6768
+zbw.eu,100%

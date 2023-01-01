@@ -1,0 +1,3 @@
+Deleted previous index: true
+Uploaded: 6768
+Failed: 0

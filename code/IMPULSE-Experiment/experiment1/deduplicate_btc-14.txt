@@ -1,0 +1,3 @@
+Number of unique titles in index: 6457
+Deleted documents: 79
+Merged documents: 79

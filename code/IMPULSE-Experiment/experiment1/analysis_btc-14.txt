@@ -1,0 +1,24 @@
+Total Docs,6739
+Docs with Abstracts,3
+Docs with Concepts,2759
+Docs with Keywords,0
+Docs complete,0
+Avg. Concepts/Doc,2.33381660021747
+SD Concepts/Doc,1.3971382379572175
+Avg. Keywords/Doc,0
+SD Keywords/Doc,0
+Number of PLDs,7
+glottolog.org,3299
+glottolog.org,49%
+bnb.data.bl.uk,3182
+bnb.data.bl.uk,47%
+data.bnf.fr,152
+data.bnf.fr,2%
+lod.geospecies.org,62
+lod.geospecies.org,1%
+worldbank.270a.info,39
+worldbank.270a.info,1%
+ccel.org,3
+ccel.org,0%
+assets.taxonconcept.org,2
+assets.taxonconcept.org,0%

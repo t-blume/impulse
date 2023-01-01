@@ -1,0 +1,8 @@
+--------Instances---------
+Num: 111,434
+Time: 4,254s
+Maximum instances per second: 0
+Minimum instances per second: 2,147,483,647
+Maximum memory allocated: 0 MB
+Maximum memory used: 0 MB
+--------------------------

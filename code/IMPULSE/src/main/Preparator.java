@@ -56,7 +56,7 @@ public class Preparator {
         MongoClient mongoClient = new MongoClient();
         MongoDatabase database = mongoClient.getDatabase("impulse-cache");
         MongoCollection<Document> collection = database.getCollection("disk-storage");
-        ;
+
         Document document = collection.find(new Document(RDFInstance.LOCATOR_KEY, 1019327006)).first();
         System.out.println(document);
         RDFInstance rdfInstance = new RDFInstance(document);

@@ -1,0 +1,10 @@
+Docs with added abstract,0
+Docs with added keywords,0
+Docs with added concept,0
+Total added keywords,0
+Avg added keywords,NaN
+SD added keywords,NaN
+Total added concepts,0
+Avg added concepts,NaN
+SD added concepts,NaN
+Errors: 0
